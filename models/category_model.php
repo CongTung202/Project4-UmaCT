@@ -1,7 +1,4 @@
 <?php
-// PHP làm client gọi sang Python API (cổng 8000)
-define('API_URL', 'http://127.0.0.1:8000/api');
-
 function getAllCategories() {
     $ch = curl_init(API_URL . '/categories');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

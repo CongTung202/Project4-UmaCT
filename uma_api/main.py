@@ -90,3 +90,103 @@ def delete_category(category_id: int):
         raise HTTPException(status_code=400, detail="Không thể xóa! Danh mục này đang chứa sản phẩm.")
     finally:
         conn.close()
+        # Model mô tả dữ liệu đầu vào cho Sản phẩm
+class ProductCreate(BaseModel):
+    category_id: int
+    supplier_id: int
+    name: str
+    description: str = ""
+    price: float
+    stock_quantity: int
+    is_active: bool = True
+
+# 6. API: Lấy danh sách sản phẩm (Có JOIN để lấy tên danh mục và nhà cung cấp)
+@app.get("/api/products")
+def get_products():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    sql = """
+        SELECT p.*, c.name as category_name, s.name as supplier_name 
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN suppliers s ON p.supplier_id = s.id
+        ORDER BY p.id DESC
+    """
+    cursor.execute(sql)
+    products = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": products}
+
+# 7. API: Thêm sản phẩm mới
+@app.post("/api/products")
+def create_product(product: ProductCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            INSERT INTO products (category_id, supplier_id, name, description, price, stock_quantity, is_active) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(sql, (
+            product.category_id, product.supplier_id, product.name, 
+            product.description, product.price, product.stock_quantity, product.is_active
+        ))
+        conn.commit()
+        return {"status": "success", "message": "Thêm sản phẩm thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Lỗi: {str(e)}")
+    finally:
+        conn.close()
+# 8. API: Lấy chi tiết 1 sản phẩm theo ID
+@app.get("/api/products/{product_id}")
+def get_product(product_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+    if not product:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+    return {"status": "success", "data": product}
+
+# 9. API: Cập nhật sản phẩm (PUT)
+@app.put("/api/products/{product_id}")
+def update_product(product_id: int, product: ProductCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            UPDATE products 
+            SET category_id = %s, supplier_id = %s, name = %s, 
+                description = %s, price = %s, stock_quantity = %s, is_active = %s
+            WHERE id = %s
+        """
+        cursor.execute(sql, (
+            product.category_id, product.supplier_id, product.name, 
+            product.description, product.price, product.stock_quantity, product.is_active, product_id
+        ))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không có gì thay đổi hoặc không tìm thấy sản phẩm")
+        return {"status": "success", "message": "Cập nhật thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Lỗi: {str(e)}")
+    finally:
+        conn.close()
+
+# 10. API: Xóa sản phẩm (DELETE)
+@app.delete("/api/products/{product_id}")
+def delete_product(product_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "DELETE FROM products WHERE id = %s"
+        cursor.execute(sql, (product_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm để xóa")
+        return {"status": "success", "message": "Xóa thành công!"}
+    except pymysql.IntegrityError:
+        raise HTTPException(status_code=400, detail="Không thể xóa! Sản phẩm này đang nằm trong đơn hàng của khách.")
+    finally:
+        conn.close()
