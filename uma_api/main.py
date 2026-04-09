@@ -2,6 +2,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pymysql
+from datetime import datetime
+from typing import Optional
 
 app = FastAPI(title="UmaCT API")
 
@@ -188,5 +190,201 @@ def delete_product(product_id: int):
         return {"status": "success", "message": "Xóa thành công!"}
     except pymysql.IntegrityError:
         raise HTTPException(status_code=400, detail="Không thể xóa! Sản phẩm này đang nằm trong đơn hàng của khách.")
+    finally:
+        conn.close()
+# Model mô tả dữ liệu đầu vào cho Voucher
+class VoucherCreate(BaseModel):
+    code: str
+    discount_amount: float
+    min_order_value: Optional[float] = 0
+    usage_limit: Optional[int] = 0
+    expiration_date: Optional[datetime] = None
+
+# 11. API: Lấy danh sách Voucher
+@app.get("/api/vouchers")
+def get_vouchers():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM vouchers ORDER BY id DESC")
+    vouchers = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": vouchers}
+
+# 12. API: Thêm Voucher mới
+@app.post("/api/vouchers")
+def create_voucher(voucher: VoucherCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            INSERT INTO vouchers (code, discount_amount, min_order_value, usage_limit, expiration_date) 
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        # Nếu expiration_date được gửi lên, Python sẽ tự hiểu định dạng
+        cursor.execute(sql, (
+            voucher.code, voucher.discount_amount, voucher.min_order_value, 
+            voucher.usage_limit, voucher.expiration_date
+        ))
+        conn.commit()
+        return {"status": "success", "message": "Thêm mã giảm giá thành công!"}
+    except pymysql.IntegrityError:
+        raise HTTPException(status_code=400, detail="Mã giảm giá (Code) này đã tồn tại!")
+    finally:
+        conn.close()
+# 13. API: Lấy chi tiết 1 Voucher theo ID (Để đổ vào form Sửa)
+@app.get("/api/vouchers/{voucher_id}")
+def get_voucher(voucher_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM vouchers WHERE id = %s", (voucher_id,))
+    voucher = cursor.fetchone()
+    conn.close()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Không tìm thấy mã giảm giá")
+    return {"status": "success", "data": voucher}
+
+# 14. API: Cập nhật Voucher (PUT)
+@app.put("/api/vouchers/{voucher_id}")
+def update_voucher(voucher_id: int, voucher: VoucherCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            UPDATE vouchers 
+            SET code = %s, discount_amount = %s, min_order_value = %s, 
+                usage_limit = %s, expiration_date = %s
+            WHERE id = %s
+        """
+        cursor.execute(sql, (
+            voucher.code, voucher.discount_amount, voucher.min_order_value, 
+            voucher.usage_limit, voucher.expiration_date, voucher_id
+        ))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không có gì thay đổi hoặc không tìm thấy mã giảm giá")
+        return {"status": "success", "message": "Cập nhật thành công!"}
+    except pymysql.IntegrityError:
+        raise HTTPException(status_code=400, detail="Mã giảm giá (Code) bị trùng lặp!")
+    finally:
+        conn.close()
+
+# 15. API: Xóa Voucher (DELETE)
+@app.delete("/api/vouchers/{voucher_id}")
+def delete_voucher(voucher_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "DELETE FROM vouchers WHERE id = %s"
+        cursor.execute(sql, (voucher_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không tìm thấy mã giảm giá để xóa")
+        return {"status": "success", "message": "Xóa thành công!"}
+    except pymysql.IntegrityError:
+        # Bắt lỗi nếu mã này đã được khách hàng sử dụng trong hóa đơn
+        raise HTTPException(status_code=400, detail="Không thể xóa! Mã này đã được sử dụng trong hệ thống.")
+    finally:
+        conn.close()
+# Model mô tả dữ liệu khi Admin cập nhật trạng thái đơn hàng
+class OrderStatusUpdate(BaseModel):
+    status: str
+
+# 16. API: Lấy danh sách tất cả đơn hàng
+@app.get("/api/orders")
+def get_orders():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Lấy thông tin đơn hàng kèm tên người mua
+    sql = """
+        SELECT o.*, u.full_name, u.username 
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        ORDER BY o.created_at DESC
+    """
+    cursor.execute(sql)
+    orders = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": orders}
+
+# 17. API: Lấy chi tiết 1 đơn hàng (Bao gồm thông tin chung và danh sách sản phẩm)
+@app.get("/api/orders/{order_id}")
+def get_order_detail(order_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Lấy thông tin chung của đơn hàng
+    sql_order = """
+        SELECT o.*, u.full_name, u.email, u.phone 
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        WHERE o.id = %s
+    """
+    cursor.execute(sql_order, (order_id,))
+    order_info = cursor.fetchone()
+    
+    if not order_info:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+        
+    # 2. Lấy danh sách sản phẩm trong đơn hàng đó (order_items)
+    sql_items = """
+        SELECT oi.*, p.name as product_name, p.image_url 
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = %s
+    """
+    cursor.execute(sql_items, (order_id,))
+    items = cursor.fetchall()
+    conn.close()
+    
+    # Gộp chung vào 1 response
+    return {
+        "status": "success", 
+        "data": {
+            "order_info": order_info,
+            "items": items
+        }
+    }
+
+# 18. API: Cập nhật trạng thái đơn hàng
+@app.put("/api/orders/{order_id}/status")
+def update_order_status(order_id: int, status_update: OrderStatusUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Kiểm tra trạng thái hợp lệ
+    valid_statuses = ['PENDING', 'PAID', 'SHIPPING', 'COMPLETED', 'CANCELLED']
+    if status_update.status not in valid_statuses:
+         raise HTTPException(status_code=400, detail="Trạng thái không hợp lệ")
+         
+    try:
+        sql = "UPDATE orders SET status = %s WHERE id = %s"
+        cursor.execute(sql, (status_update.status, order_id))
+        conn.commit()
+        return {"status": "success", "message": "Cập nhật trạng thái thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# 19. API: Xóa đơn hàng (DELETE)
+@app.delete("/api/orders/{order_id}")
+def delete_order(order_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # 1. Xóa lịch sử dùng voucher của đơn hàng này (nếu có) để tránh lỗi Khóa ngoại
+        cursor.execute("DELETE FROM user_voucher_usage WHERE order_id = %s", (order_id,))
+        
+        # 2. Xóa đơn hàng (Bảng order_items sẽ tự động xóa theo nhờ ON DELETE CASCADE của bạn)
+        sql = "DELETE FROM orders WHERE id = %s"
+        cursor.execute(sql, (order_id,))
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng để xóa")
+            
+        return {"status": "success", "message": "Xóa đơn hàng thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
