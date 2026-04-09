@@ -53,5 +53,4 @@ $vouchers = getAllVouchers();
     </table>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

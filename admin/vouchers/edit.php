@@ -96,5 +96,4 @@ if (!empty($voucher['expiration_date'])) {
     </form>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

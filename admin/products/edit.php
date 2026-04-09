@@ -2,6 +2,7 @@
 require_once '../../admin/includes/header.php';
 require_once '../../models/category_model.php';
 require_once '../../models/product_model.php';
+require_once '../../models/supplier_model.php';
 
 $error = '';
 $success = '';
@@ -19,10 +20,7 @@ if (!$product) {
 
 // Lấy danh sách để đổ vào dropdown
 $categories = getAllCategories();
-$suppliers = [ // Tạm hardcode, đổi thành getAllSuppliers() nếu bạn đã có model
-    ['id' => 1, 'name' => 'Good Smile Company'],
-    ['id' => 2, 'name' => 'Cygames Store']
-];
+$suppliers = getAllSuppliers();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $data = [
@@ -119,5 +117,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </form>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

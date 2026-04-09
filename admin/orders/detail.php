@@ -98,6 +98,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['status'])) {
         </div>
     </div>
 </div>
-
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

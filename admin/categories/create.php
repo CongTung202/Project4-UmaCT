@@ -53,6 +53,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <button type="submit" class="btn btn-add" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 4px;">Lưu danh mục</button>
     </form>
 </div>
-
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

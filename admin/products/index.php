@@ -1,7 +1,7 @@
 <?php
 require_once '../../admin/includes/header.php';
 require_once '../../models/product_model.php';
-
+require_once '../../models/supplier_model.php';
 $products = getAllProducts();
 ?>
 
@@ -52,5 +52,4 @@ $products = getAllProducts();
     </table>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

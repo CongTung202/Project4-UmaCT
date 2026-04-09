@@ -111,5 +111,4 @@ $roles = $data['roles'];
     </table>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

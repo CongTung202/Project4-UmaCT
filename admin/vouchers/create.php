@@ -70,6 +70,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <button type="submit" class="btn btn-add" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Lưu mã giảm giá</button>
     </form>
 </div>
-
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

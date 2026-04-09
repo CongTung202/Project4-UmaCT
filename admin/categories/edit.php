@@ -59,5 +59,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <button type="submit" class="btn btn-edit">Lưu thay đổi</button>
     </form>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

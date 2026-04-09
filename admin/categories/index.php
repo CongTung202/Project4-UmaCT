@@ -1,7 +1,6 @@
 <?php
 // 1. Nhúng giao diện header
 require_once '../../admin/includes/header.php';
-
 // 2. Nhúng file model (nơi chứa các hàm gọi API Python)
 require_once '../../models/category_model.php';
 
@@ -40,5 +39,4 @@ $categories = getAllCategories();
             <?php endif; ?>
         </tbody>
     </table>
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

@@ -9,3 +9,111 @@ th { background-color: #f8f9fa; font-weight: bold; }
 .btn-delete { background-color: #dc3545; }
 .form-group { margin-bottom: 15px; }
 .form-control { width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+/* --- Bổ sung CSS cho Layout Sidebar --- */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f9; /* Màu nền xám nhạt cho admin */
+}
+
+/* Container bọc toàn bộ trang */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Thanh menu bên trái */
+.sidebar {
+    width: 250px;
+    background-color: #343a40; /* Màu tối ngầu */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    background-color: #23272b;
+    border-bottom: 1px solid #4f5962;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #ffc107; /* Màu vàng tạo điểm nhấn */
+}
+/* --- Bổ sung CSS cho Layout Sidebar --- */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f9; /* Màu nền xám nhạt cho admin */
+}
+
+/* Container bọc toàn bộ trang */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Thanh menu bên trái */
+.sidebar {
+    width: 250px;
+    background-color: #343a40; /* Màu tối ngầu */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    background-color: #23272b;
+    border-bottom: 1px solid #4f5962;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #ffc107; /* Màu vàng tạo điểm nhấn */
+}
+
+/* Danh sách link trong menu */
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-links li a {
+    display: block;
+    padding: 15px 20px;
+    color: #c2c7d0;
+    text-decoration: none;
+    border-bottom: 1px solid #4f5962;
+    transition: all 0.3s ease;
+}
+
+/* Hiệu ứng khi di chuột vào */
+.nav-links li a:hover {
+    background-color: #494e53;
+    color: #fff;
+}
+
+/* Hiệu ứng tô sáng Tab đang được chọn */
+.nav-links li a.active {
+    background-color: #007bff; /* Nền xanh dương */
+    color: #fff;
+    border-left: 4px solid #ffc107; /* Viền vàng bên trái */
+    font-weight: bold;
+}
+
+/* Phần nội dung chính bên phải */
+.main-content {
+    flex: 1; /* Chiếm toàn bộ không gian còn lại */
+    padding: 20px 40px;
+    background-color: #fff;
+    overflow-y: auto;
+}

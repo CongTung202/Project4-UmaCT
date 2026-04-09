@@ -2,16 +2,14 @@
 require_once '../../admin/includes/header.php';
 require_once '../../models/category_model.php';
 require_once '../../models/product_model.php';
+require_once '../../models/supplier_model.php';
 
 // Lấy danh sách danh mục để đổ vào dropdown
 $categories = getAllCategories();
 
 // Tạm thời hardcode supplier nếu bạn chưa làm bảng suppliers.
 // Nếu làm rồi, hãy gọi $suppliers = getAllSuppliers();
-$suppliers = [
-    ['id' => 1, 'name' => 'Good Smile Company'],
-    ['id' => 2, 'name' => 'Cygames Store']
-];
+$suppliers = getAllSuppliers();
 
 $error = '';
 
@@ -104,5 +102,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </form>
 </div>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>

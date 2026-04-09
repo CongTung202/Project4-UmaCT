@@ -487,3 +487,161 @@ def get_user_detail(user_id: int):
             "orders": user_orders
         }
     }
+# Model mô tả dữ liệu đầu vào cho Nhà cung cấp
+class SupplierCreate(BaseModel):
+    name: str
+    contact_info: str = None
+    address: str = None
+
+# 24. API: Lấy danh sách nhà cung cấp
+@app.get("/api/suppliers")
+def get_suppliers():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM suppliers ORDER BY id DESC")
+    suppliers = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": suppliers}
+
+# 25. API: Thêm nhà cung cấp mới
+@app.post("/api/suppliers")
+def create_supplier(supplier: SupplierCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "INSERT INTO suppliers (name, contact_info, address) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (supplier.name, supplier.contact_info, supplier.address))
+        conn.commit()
+        return {"status": "success", "message": "Thêm nhà cung cấp thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# 26. API: Lấy chi tiết 1 nhà cung cấp theo ID
+@app.get("/api/suppliers/{supplier_id}")
+def get_supplier(supplier_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM suppliers WHERE id = %s", (supplier_id,))
+    supplier = cursor.fetchone()
+    conn.close()
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhà cung cấp")
+    return {"status": "success", "data": supplier}
+
+# 27. API: Cập nhật thông tin nhà cung cấp (PUT)
+@app.put("/api/suppliers/{supplier_id}")
+def update_supplier(supplier_id: int, supplier: SupplierCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            UPDATE suppliers 
+            SET name = %s, contact_info = %s, address = %s
+            WHERE id = %s
+        """
+        cursor.execute(sql, (supplier.name, supplier.contact_info, supplier.address, supplier_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không có gì thay đổi hoặc không tìm thấy nhà cung cấp")
+        return {"status": "success", "message": "Cập nhật thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 28. API: Xóa nhà cung cấp (DELETE)
+@app.delete("/api/suppliers/{supplier_id}")
+def delete_supplier(supplier_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "DELETE FROM suppliers WHERE id = %s"
+        cursor.execute(sql, (supplier_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Không tìm thấy nhà cung cấp để xóa")
+        return {"status": "success", "message": "Xóa thành công!"}
+    except pymysql.IntegrityError:
+        # Bắt lỗi Khóa ngoại: Nếu nhà cung cấp này đang phân phối sản phẩm trong CSDL
+        raise HTTPException(status_code=400, detail="Không thể xóa! Nhà cung cấp này đang chứa sản phẩm trong hệ thống.")
+    finally:
+        conn.close()
+# Model mô tả dữ liệu đầu vào cho Bài viết
+class ArticleCreate(BaseModel):
+    title: str
+    content: str
+    author_id: int
+
+# 29. API: Lấy danh sách bài viết
+@app.get("/api/articles")
+def get_articles():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    sql = """
+        SELECT a.*, u.full_name as author_name, u.username 
+        FROM articles a
+        LEFT JOIN users u ON a.author_id = u.id
+        ORDER BY a.created_at DESC
+    """
+    cursor.execute(sql)
+    articles = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": articles}
+
+# 30. API: Thêm bài viết mới
+@app.post("/api/articles")
+def create_article(article: ArticleCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "INSERT INTO articles (title, content, author_id) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (article.title, article.content, article.author_id))
+        conn.commit()
+        return {"status": "success", "message": "Thêm bài viết thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 31. API: Lấy chi tiết 1 bài viết (Để Sửa)
+@app.get("/api/articles/{article_id}")
+def get_article(article_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM articles WHERE id = %s", (article_id,))
+    article = cursor.fetchone()
+    conn.close()
+    if not article:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bài viết")
+    return {"status": "success", "data": article}
+
+# 32. API: Cập nhật bài viết
+@app.put("/api/articles/{article_id}")
+def update_article(article_id: int, article: ArticleCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "UPDATE articles SET title = %s, content = %s, author_id = %s WHERE id = %s"
+        cursor.execute(sql, (article.title, article.content, article.author_id, article_id))
+        conn.commit()
+        return {"status": "success", "message": "Cập nhật bài viết thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 33. API: Xóa bài viết
+@app.delete("/api/articles/{article_id}")
+def delete_article(article_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "DELETE FROM articles WHERE id = %s"
+        cursor.execute(sql, (article_id,))
+        conn.commit()
+        return {"status": "success", "message": "Xóa bài viết thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()

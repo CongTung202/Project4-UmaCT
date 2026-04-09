@@ -136,5 +136,4 @@ $orders = getAllOrders();
     }
 </script>
 
-</body>
-</html>
+<?php require_once '../../admin/includes/footer.php'; ?>
