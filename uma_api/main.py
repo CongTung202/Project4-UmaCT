@@ -388,3 +388,102 @@ def delete_order(order_id: int):
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
+# Model đầu vào cho Cập nhật trạng thái và Phân quyền
+class UserStatusUpdate(BaseModel):
+    status: str
+
+class UserRoleUpdate(BaseModel):
+    role_id: int
+
+# 20. API: Lấy danh sách Người dùng
+@app.get("/api/users")
+def get_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    sql = """
+        SELECT u.id, u.username, u.full_name, u.email, u.phone, u.status, u.created_at, 
+               u.role_id, r.role_name 
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        ORDER BY u.id DESC
+    """
+    cursor.execute(sql)
+    users = cursor.fetchall()
+    
+    # Lấy luôn danh sách roles để làm dropdown phân quyền bên PHP
+    cursor.execute("SELECT * FROM roles")
+    roles = cursor.fetchall()
+    
+    conn.close()
+    return {"status": "success", "data": {"users": users, "roles": roles}}
+
+# 21. API: Cập nhật trạng thái (Khóa/Mở khóa)
+@app.put("/api/users/{user_id}/status")
+def update_user_status(user_id: int, status_update: UserStatusUpdate):
+    if status_update.status not in ['ACTIVE', 'BANNED']:
+        raise HTTPException(status_code=400, detail="Trạng thái không hợp lệ")
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE users SET status = %s WHERE id = %s", (status_update.status, user_id))
+        conn.commit()
+        return {"status": "success", "message": f"Đã đổi trạng thái thành {status_update.status}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 22. API: Cập nhật quyền (Role)
+@app.put("/api/users/{user_id}/role")
+def update_user_role(user_id: int, role_update: UserRoleUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE users SET role_id = %s WHERE id = %s", (role_update.role_id, user_id))
+        conn.commit()
+        return {"status": "success", "message": "Cập nhật quyền thành công"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# 23. API: Lấy chi tiết 1 người dùng và lịch sử mua hàng
+@app.get("/api/users/{user_id}")
+def get_user_detail(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Lấy thông tin cá nhân và quyền
+    sql_user = """
+        SELECT u.id, u.username, u.full_name, u.email, u.phone, u.address, 
+               u.avatar_url, u.status, u.created_at, r.role_name 
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.id = %s
+    """
+    cursor.execute(sql_user, (user_id,))
+    user_info = cursor.fetchone()
+    
+    if not user_info:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+        
+    # 2. Lấy lịch sử đơn hàng của người dùng này
+    sql_orders = """
+        SELECT id, total_price, payment_method, status, created_at 
+        FROM orders 
+        WHERE user_id = %s 
+        ORDER BY created_at DESC
+    """
+    cursor.execute(sql_orders, (user_id,))
+    user_orders = cursor.fetchall()
+    
+    conn.close()
+    
+    return {
+        "status": "success", 
+        "data": {
+            "info": user_info,
+            "orders": user_orders
+        }
+    }
