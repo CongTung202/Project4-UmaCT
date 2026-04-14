@@ -7,6 +7,7 @@ from typing import Optional
 import cloudinary
 import cloudinary.uploader
 from fastapi import UploadFile, File
+import json
 
 app = FastAPI(title="UmaCT API")
 
@@ -119,7 +120,8 @@ def get_products():
     conn = get_db_connection()
     cursor = conn.cursor()
     sql = """
-        SELECT p.*, c.name as category_name, s.name as supplier_name 
+        SELECT p.*, c.name as category_name, s.name as supplier_name,
+               (SELECT image_url FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as main_image
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN suppliers s ON p.supplier_id = s.id
@@ -136,15 +138,27 @@ def create_product(product: ProductCreate):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        sql = """
-            INSERT INTO products (category_id, supplier_id, name, description, price, stock_quantity, is_active, images) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        # BƯỚC 1: Lưu thông tin vào bảng products (KHÔNG có cột images)
+        sql_product = """
+            INSERT INTO products (category_id, supplier_id, name, description, price, stock_quantity, is_active) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(sql, (
+        cursor.execute(sql_product, (
             product.category_id, product.supplier_id, product.name, 
-            product.description, product.price, product.stock_quantity, 
-            product.is_active, product.images # <-- Bổ sung ở đây
+            product.description, product.price, product.stock_quantity, product.is_active
         ))
+        
+        # Lấy ID của sản phẩm vừa được tạo
+        product_id = cursor.lastrowid
+        
+        # BƯỚC 2: Lưu danh sách ảnh vào bảng product_images
+        image_urls = json.loads(product.images) # Biến chuỗi JSON thành List trong Python
+        if image_urls:
+            sql_images = "INSERT INTO product_images (product_id, image_url) VALUES (%s, %s)"
+            # Tạo danh sách các tuple dữ liệu: [(1, 'link1'), (1, 'link2')]
+            img_data = [(product_id, url) for url in image_urls]
+            cursor.executemany(sql_images, img_data) # Insert nhiều dòng cùng lúc
+
         conn.commit()
         return {"status": "success", "message": "Thêm sản phẩm thành công!"}
     except Exception as e:
@@ -156,11 +170,24 @@ def create_product(product: ProductCreate):
 def get_product(product_id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # 1. Lấy thông tin chung của sản phẩm
     cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
     product = cursor.fetchone()
-    conn.close()
+    
     if not product:
+        conn.close()
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+        
+    # 2. Lấy danh sách ảnh từ bảng product_images
+    cursor.execute("SELECT image_url FROM product_images WHERE product_id = %s", (product_id,))
+    images = cursor.fetchall()
+    
+    # Ép mảng ảnh thành chuỗi JSON giống hệt cách PHP gửi lên để file edit.php của bạn đọc được luôn
+    image_list = [img['image_url'] for img in images]
+    product['images'] = json.dumps(image_list) 
+    
+    conn.close()
     return {"status": "success", "data": product}
 
 # 9. API: Cập nhật sản phẩm (PUT)
@@ -169,20 +196,28 @@ def update_product(product_id: int, product: ProductCreate):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        sql = """
+        # BƯỚC 1: Cập nhật bảng products
+        sql_product = """
             UPDATE products 
             SET category_id = %s, supplier_id = %s, name = %s, 
-                description = %s, price = %s, stock_quantity = %s, is_active = %s, images = %s
+                description = %s, price = %s, stock_quantity = %s, is_active = %s
             WHERE id = %s
         """
-        cursor.execute(sql, (
+        cursor.execute(sql_product, (
             product.category_id, product.supplier_id, product.name, 
-            product.description, product.price, product.stock_quantity, 
-            product.is_active, product.images, product_id # <-- Bổ sung ở đây
+            product.description, product.price, product.stock_quantity, product.is_active, product_id
         ))
+        
+        # BƯỚC 2: Cập nhật bảng product_images (Xóa hết ảnh cũ, thêm lại ảnh mới cho dễ)
+        cursor.execute("DELETE FROM product_images WHERE product_id = %s", (product_id,))
+        
+        image_urls = json.loads(product.images)
+        if image_urls:
+            sql_images = "INSERT INTO product_images (product_id, image_url) VALUES (%s, %s)"
+            img_data = [(product_id, url) for url in image_urls]
+            cursor.executemany(sql_images, img_data)
+
         conn.commit()
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Không có gì thay đổi hoặc không tìm thấy sản phẩm")
         return {"status": "success", "message": "Cập nhật thành công!"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Lỗi: {str(e)}")
@@ -660,7 +695,7 @@ def delete_article(article_id: int):
         conn.close()
 # 34. API: Nhận file từ PHP và upload lên Cloudinary
 @app.post("/api/upload")
-async def upload_image(file: UploadFile = File(...)):
+def upload_image(file: UploadFile = File(...)):
     try:
         # Tải file thẳng lên Cloudinary
         result = cloudinary.uploader.upload(file.file)
@@ -669,3 +704,75 @@ async def upload_image(file: UploadFile = File(...)):
         return {"status": "success", "url": result.get("secure_url")}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Lỗi Upload: {str(e)}")
+# Model mô tả dữ liệu đầu vào cho Banner
+class BannerCreate(BaseModel):
+    image_url: str
+    link: str = None
+    position: str = None
+
+# 35. API: Lấy danh sách banner
+@app.get("/api/banners")
+def get_banners():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM banners ORDER BY id DESC")
+    banners = cursor.fetchall()
+    conn.close()
+    return {"status": "success", "data": banners}
+
+# 36. API: Thêm banner mới
+@app.post("/api/banners")
+def create_banner(banner: BannerCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "INSERT INTO banners (image_url, link, position) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (banner.image_url, banner.link, banner.position))
+        conn.commit()
+        return {"status": "success", "message": "Thêm banner thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 37. API: Lấy chi tiết 1 banner
+@app.get("/api/banners/{banner_id}")
+def get_banner(banner_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM banners WHERE id = %s", (banner_id,))
+    banner = cursor.fetchone()
+    conn.close()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Không tìm thấy banner")
+    return {"status": "success", "data": banner}
+
+# 38. API: Cập nhật banner
+@app.put("/api/banners/{banner_id}")
+def update_banner(banner_id: int, banner: BannerCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "UPDATE banners SET image_url = %s, link = %s, position = %s WHERE id = %s"
+        cursor.execute(sql, (banner.image_url, banner.link, banner.position, banner_id))
+        conn.commit()
+        return {"status": "success", "message": "Cập nhật thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+# 39. API: Xóa banner
+@app.delete("/api/banners/{banner_id}")
+def delete_banner(banner_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "DELETE FROM banners WHERE id = %s"
+        cursor.execute(sql, (banner_id,))
+        conn.commit()
+        return {"status": "success", "message": "Xóa thành công!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()

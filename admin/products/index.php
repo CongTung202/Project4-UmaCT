@@ -42,6 +42,7 @@ $products = getAllProducts();
                         <?php endif; ?>
                     </td>
                     <td>
+                        <a href="view.php?id=<?= $p['id'] ?>" class="btn btn-edit">Xem</a>
                         <a href="edit.php?id=<?= $p['id'] ?>" class="btn btn-edit">Sửa</a>
                         <a href="delete.php?id=<?= $p['id'] ?>" class="btn btn-delete" onclick="return confirm('Bạn có chắc muốn xóa?');">Xóa</a>
                     </td>

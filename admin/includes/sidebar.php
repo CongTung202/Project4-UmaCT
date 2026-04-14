@@ -44,5 +44,10 @@
                 Quản lý Bài viết
             </a>
         </li>
+        <li>
+            <a href="<?= BASE_URL ?>/admin/banners/index.php" class="<?= (strpos($current_url, '/banners/') !== false) ? 'active' : '' ?>">
+                Quản lý Banner
+            </a>
+        </li>
     </ul>
 </aside>
