@@ -776,3 +776,63 @@ def delete_banner(banner_id: int):
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
+# 40. API: Thống kê tổng hợp cho Dashboard
+@app.get("/api/dashboard/stats")
+def get_dashboard_stats():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # 1. Các con số tổng quan
+        cursor.execute("SELECT COUNT(id) as total FROM users")
+        total_users = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(id) as total FROM products")
+        total_products = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(id) as total FROM orders")
+        total_orders = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT SUM(total_price) as total FROM orders WHERE status IN ('PAID', 'COMPLETED')")
+        result = cursor.fetchone()
+        total_revenue = result['total'] if result and result['total'] else 0
+        
+        # 2. Lấy doanh thu 6 tháng gần nhất (Dành cho biểu đồ)
+        sql_chart = """
+            SELECT DATE_FORMAT(created_at, '%m/%Y') as month, SUM(total_price) as revenue
+            FROM orders
+            WHERE status IN ('PAID', 'COMPLETED')
+            GROUP BY month
+            ORDER BY MAX(created_at) DESC
+            LIMIT 6
+        """
+        cursor.execute(sql_chart)
+        chart_data = cursor.fetchall()
+        chart_data.reverse() # Đảo ngược lại để tháng cũ xếp trước, tháng mới xếp sau
+        
+        # 3. Lấy 5 đơn hàng mới nhất
+        sql_recent_orders = """
+            SELECT o.id, o.total_price, o.status, o.created_at, u.full_name
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC LIMIT 5
+        """
+        cursor.execute(sql_recent_orders)
+        recent_orders = cursor.fetchall()
+        
+        return {
+            "status": "success", 
+            "data": {
+                "summary": {
+                    "users": total_users,
+                    "products": total_products,
+                    "orders": total_orders,
+                    "revenue": total_revenue
+                },
+                "chart": chart_data,
+                "recent_orders": recent_orders
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()

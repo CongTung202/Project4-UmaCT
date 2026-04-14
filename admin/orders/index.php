@@ -5,7 +5,7 @@ require_once '../../models/order_model.php';
 $error = '';
 $success = '';
 
-// Bắt sự kiện Đổi trạng thái nhanh từ dropdown
+// Bắt sự kiện Đổi trạng thái từ Modal xác nhận
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_status') {
     try {
         updateOrderStatus($_POST['order_id'], $_POST['status']);
@@ -38,7 +38,7 @@ $orders = getAllOrders();
     .close:hover { color: black; }
     
     /* CSS cho dropdown trạng thái */
-    .select-status { padding: 5px; border-radius: 4px; border: 1px solid #ccc; outline: none;}
+    .select-status { padding: 5px; border-radius: 4px; border: 1px solid #ccc; outline: none; cursor: pointer;}
 </style>
 
 <div style="margin: 20px;">
@@ -74,10 +74,12 @@ $orders = getAllOrders();
                     <td><?= date('d/m/Y H:i', strtotime($o['created_at'])) ?></td>
                     
                     <td>
-                        <form action="" method="POST" style="margin: 0;">
+                        <form id="status-form-<?= $o['id'] ?>" action="" method="POST" style="margin: 0;">
                             <input type="hidden" name="action" value="update_status">
                             <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                            <select name="status" class="select-status" onchange="this.form.submit()">
+                            <select name="status" class="select-status" 
+                                    onfocus="this.setAttribute('data-old-value', this.value);" 
+                                    onchange="openStatusModal(this, <?= $o['id'] ?>)">
                                 <option value="PENDING" <?= $o['status'] == 'PENDING' ? 'selected' : '' ?>>Chờ xử lý</option>
                                 <option value="PAID" <?= $o['status'] == 'PAID' ? 'selected' : '' ?>>Đã thanh toán</option>
                                 <option value="SHIPPING" <?= $o['status'] == 'SHIPPING' ? 'selected' : '' ?>>Đang giao</option>
@@ -89,7 +91,7 @@ $orders = getAllOrders();
                     
                     <td>
                         <a href="detail.php?id=<?= $o['id'] ?>" class="btn btn-edit" style="background-color: #17a2b8;">Chi tiết</a>
-                        <button class="btn btn-delete" onclick="openModal(<?= $o['id'] ?>)" style="cursor: pointer; border: none;">Xóa</button>
+                        <button class="btn btn-delete" onclick="openDeleteModal(<?= $o['id'] ?>)" style="cursor: pointer; border: none;">Xóa</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -98,40 +100,89 @@ $orders = getAllOrders();
     </table>
 </div>
 
+<div id="statusModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeStatusModal()">&times;</span>
+        <h3 style="margin-top: 0; color: #007bff;">Xác nhận đổi trạng thái</h3>
+        <p>Bạn có chắc chắn muốn đổi trạng thái đơn hàng <strong id="statusModalOrderId" style="font-size: 18px;"></strong> thành <strong id="statusModalNewStatus" style="color: red;"></strong>?</p>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <button type="button" class="btn" style="background-color: #6c757d; cursor: pointer; border: none; padding: 8px 15px;" onclick="closeStatusModal()">Hủy bỏ</button>
+            <button type="button" class="btn btn-add" style="cursor: pointer; border: none; padding: 8px 15px;" onclick="confirmSubmitStatus()">Đồng ý</button>
+        </div>
+    </div>
+</div>
+
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
+        <span class="close" onclick="closeDeleteModal()">&times;</span>
         <h3 style="margin-top: 0; color: #d9534f;">Cảnh báo xóa!</h3>
         <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng <strong id="modalOrderId" style="font-size: 18px;"></strong> không?</p>
         <p style="color: #666; font-size: 14px;">Hành động này sẽ xóa toàn bộ chi tiết sản phẩm bên trong đơn hàng và không thể khôi phục.</p>
         
         <form action="delete.php" method="POST" style="text-align: right; margin-top: 20px;">
             <input type="hidden" name="id" id="hiddenOrderIdInput">
-            <button type="button" class="btn" style="background-color: #6c757d; cursor: pointer; border: none; padding: 8px 15px;" onclick="closeModal()">Hủy bỏ</button>
+            <button type="button" class="btn" style="background-color: #6c757d; cursor: pointer; border: none; padding: 8px 15px;" onclick="closeDeleteModal()">Hủy bỏ</button>
             <button type="submit" class="btn btn-delete" style="cursor: pointer; border: none; padding: 8px 15px;">Vẫn Xóa</button>
         </form>
     </div>
 </div>
 
 <script>
-    var modal = document.getElementById("deleteModal");
+    // --- XỬ LÝ MODAL XÓA ĐƠN HÀNG ---
+    var deleteModal = document.getElementById("deleteModal");
 
-    // Hàm mở modal và gán ID đơn hàng vào form
-    function openModal(orderId) {
+    function openDeleteModal(orderId) {
         document.getElementById("modalOrderId").innerText = "#" + orderId;
         document.getElementById("hiddenOrderIdInput").value = orderId;
-        modal.style.display = "block";
+        deleteModal.style.display = "block";
     }
 
-    // Hàm đóng modal
-    function closeModal() {
-        modal.style.display = "none";
+    function closeDeleteModal() {
+        deleteModal.style.display = "none";
     }
 
-    // Click ra ngoài khoảng đen để đóng modal
+    // --- XỬ LÝ MODAL ĐỔI TRẠNG THÁI ---
+    var statusModal = document.getElementById("statusModal");
+    var currentSelectElement = null; // Lưu lại thẻ select đang thao tác
+    var currentOrderId = null;       // Lưu ID đơn hàng
+
+    function openStatusModal(selectElement, orderId) {
+        currentSelectElement = selectElement;
+        currentOrderId = orderId;
+        
+        // Lấy chữ (text) của tùy chọn vừa được chọn (VD: "Đang giao")
+        var newStatusText = selectElement.options[selectElement.selectedIndex].text;
+        
+        document.getElementById("statusModalOrderId").innerText = "#" + orderId;
+        document.getElementById("statusModalNewStatus").innerText = newStatusText;
+        
+        statusModal.style.display = "block";
+    }
+
+    function closeStatusModal() {
+        // Nếu người dùng bấm Hủy, ta phải trả thẻ Select về giá trị cũ
+        if (currentSelectElement) {
+            var oldValue = currentSelectElement.getAttribute('data-old-value');
+            currentSelectElement.value = oldValue;
+        }
+        statusModal.style.display = "none";
+    }
+
+    function confirmSubmitStatus() {
+        // Nếu đồng ý, ta tìm form chứa thẻ select đó và gửi lệnh submit đi
+        if (currentOrderId) {
+            document.getElementById("status-form-" + currentOrderId).submit();
+        }
+    }
+
+    // --- CLICK RA NGOÀI VÙNG ĐEN ĐỂ ĐÓNG ---
     window.onclick = function(event) {
-        if (event.target == modal) {
-            closeModal();
+        if (event.target == deleteModal) {
+            closeDeleteModal();
+        }
+        if (event.target == statusModal) {
+            closeStatusModal(); // Gọi hàm này để nó hoàn tác cả dropdown
         }
     }
 </script>
