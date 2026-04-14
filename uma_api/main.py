@@ -4,9 +4,19 @@ from pydantic import BaseModel
 import pymysql
 from datetime import datetime
 from typing import Optional
+import cloudinary
+import cloudinary.uploader
+from fastapi import UploadFile, File
 
 app = FastAPI(title="UmaCT API")
 
+# Cấu hình Cloudinary (Thay bằng thông tin của bạn)
+cloudinary.config( 
+  cloud_name = "TEN_CLOUD_CUA_BAN", 
+  api_key = "API_KEY_CUA_BAN", 
+  api_secret = "API_SECRET_CUA_BAN",
+  secure = True
+)
 # Hàm kết nối Database
 def get_db_connection():
     return pymysql.connect(
@@ -645,3 +655,14 @@ def delete_article(article_id: int):
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
+# 34. API: Nhận file từ PHP và upload lên Cloudinary
+@app.post("/api/upload")
+async def upload_image(file: UploadFile = File(...)):
+    try:
+        # Tải file thẳng lên Cloudinary
+        result = cloudinary.uploader.upload(file.file)
+        
+        # Trả về đường link URL an toàn (https) của bức ảnh
+        return {"status": "success", "url": result.get("secure_url")}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Lỗi Upload: {str(e)}")
