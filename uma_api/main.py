@@ -12,9 +12,9 @@ app = FastAPI(title="UmaCT API")
 
 # Cấu hình Cloudinary (Thay bằng thông tin của bạn)
 cloudinary.config( 
-  cloud_name = "TEN_CLOUD_CUA_BAN", 
-  api_key = "API_KEY_CUA_BAN", 
-  api_secret = "API_SECRET_CUA_BAN",
+  cloud_name = "dhefmthim", 
+  api_key = "614126996368587", 
+  api_secret = "iONJY3A_CCj9q6bfKPCpDrzPZtQ",
   secure = True
 )
 # Hàm kết nối Database
@@ -111,6 +111,7 @@ class ProductCreate(BaseModel):
     price: float
     stock_quantity: int
     is_active: bool = True
+    images: str = "[]"
 
 # 6. API: Lấy danh sách sản phẩm (Có JOIN để lấy tên danh mục và nhà cung cấp)
 @app.get("/api/products")
@@ -136,12 +137,13 @@ def create_product(product: ProductCreate):
     cursor = conn.cursor()
     try:
         sql = """
-            INSERT INTO products (category_id, supplier_id, name, description, price, stock_quantity, is_active) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO products (category_id, supplier_id, name, description, price, stock_quantity, is_active, images) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(sql, (
             product.category_id, product.supplier_id, product.name, 
-            product.description, product.price, product.stock_quantity, product.is_active
+            product.description, product.price, product.stock_quantity, 
+            product.is_active, product.images # <-- Bổ sung ở đây
         ))
         conn.commit()
         return {"status": "success", "message": "Thêm sản phẩm thành công!"}
@@ -170,12 +172,13 @@ def update_product(product_id: int, product: ProductCreate):
         sql = """
             UPDATE products 
             SET category_id = %s, supplier_id = %s, name = %s, 
-                description = %s, price = %s, stock_quantity = %s, is_active = %s
+                description = %s, price = %s, stock_quantity = %s, is_active = %s, images = %s
             WHERE id = %s
         """
         cursor.execute(sql, (
             product.category_id, product.supplier_id, product.name, 
-            product.description, product.price, product.stock_quantity, product.is_active, product_id
+            product.description, product.price, product.stock_quantity, 
+            product.is_active, product.images, product_id # <-- Bổ sung ở đây
         ))
         conn.commit()
         if cursor.rowcount == 0:
