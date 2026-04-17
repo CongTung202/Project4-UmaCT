@@ -4,10 +4,8 @@ require_once '../models/product_model.php';
 require_once '../models/category_model.php';
 require_once '../models/supplier_model.php';
 
-// Gọi thêm CSS
 echo '<link rel="stylesheet" href="'.BASE_URL.'/assets/css/product-detail.css">';
 
-// Kiểm tra ID
 if (!isset($_GET['id'])) {
     die("<div class='main-content'><h2>Không tìm thấy sản phẩm!</h2></div>");
 }
@@ -19,11 +17,9 @@ if (!$product) {
     die("<div class='main-content'><h2>Sản phẩm không tồn tại hoặc đã bị xóa.</h2></div>");
 }
 
-// Xử lý danh sách ảnh
 $images = !empty($product['images']) ? json_decode($product['images'], true) : [];
 $main_image = !empty($images) ? $images[0] : 'https://via.placeholder.com/600x600?text=No+Image';
 
-// Lấy tên Danh mục & Nhà cung cấp (Nếu CSDL API 8 chưa JOIN, ta tự đối chiếu)
 $categories = getAllCategories();
 $suppliers = getAllSuppliers();
 
@@ -32,6 +28,20 @@ foreach($categories as $c) { if($c['id'] == $product['category_id']) $cat_name =
 
 $sup_name = "Chưa cập nhật";
 foreach($suppliers as $s) { if($s['id'] == $product['supplier_id']) $sup_name = $s['name']; }
+
+// ==========================================
+// THÊM MỚI: LOGIC LẤY SẢN PHẨM LIÊN QUAN
+// ==========================================
+$all_products = getAllProducts();
+$related_products = [];
+foreach ($all_products as $p) {
+    // Lấy sp cùng danh mục, đang mở bán, và KHÁC với sản phẩm hiện tại
+    if ($p['category_id'] == $product['category_id'] && $p['id'] != $product['id'] && $p['is_active'] == 1) {
+        $related_products[] = $p;
+    }
+}
+// Chỉ lấy ngẫu nhiên/mới nhất 4 sản phẩm để show cho đẹp
+$related_products = array_slice($related_products, 0, 4);
 ?>
 
 <div class="product-detail-container">
@@ -80,7 +90,6 @@ foreach($suppliers as $s) { if($s['id'] == $product['supplier_id']) $sup_name = 
             <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">Số lượng:</div>
             
             <form action="cart.php" method="POST">
-                <input type="hidden" name="action" value="add">
                 <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
                 
                 <div class="qty-selector">
@@ -91,16 +100,25 @@ foreach($suppliers as $s) { if($s['id'] == $product['supplier_id']) $sup_name = 
                 
                 <p style="font-size: 12px; color: #888; margin-bottom: 20px;">(Còn <?= $product['stock_quantity'] ?> sản phẩm trong kho)</p>
 
-                <?php if($product['stock_quantity'] > 0 && $product['is_active']): ?>
-                    <button type="submit" class="btn-add-cart">
-                        <span class="main-text">THÊM VÀO GIỎ</span>
-                        <span class="sub-text">Giao tận nhà - Đổi trả dễ dàng</span>
+                <div class="action-group">
+                    <?php if($product['stock_quantity'] > 0 && $product['is_active']): ?>
+                        <button type="submit" name="action" value="add" class="btn-add-cart">
+                             Thêm vào giỏ
+                        </button>
+                        
+                        <button type="submit" name="action" value="buy_now" class="btn-buy-now">
+                             Mua ngay
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn-buy-now" style="background: #ccc; border-color: #ccc; cursor: not-allowed; flex: 2;">
+                            TẠM HẾT HÀNG
+                        </button>
+                    <?php endif; ?>
+
+                    <button type="button" class="btn-favorite" title="Thêm vào yêu thích" onclick="toggleFavorite(this)">
+                        <i class="far fa-heart"></i>
                     </button>
-                <?php else: ?>
-                    <button type="button" class="btn-add-cart" style="background: #ccc; cursor: not-allowed;">
-                        <span class="main-text">TẠM HẾT HÀNG</span>
-                    </button>
-                <?php endif; ?>
+                </div>
             </form>
         </div>
     </div>
@@ -136,6 +154,29 @@ foreach($suppliers as $s) { if($s['id'] == $product['supplier_id']) $sup_name = 
         <?= !empty($product['description']) ? htmlspecialchars($product['description']) : 'Chưa có thông tin mô tả cho sản phẩm này.' ?>
     </div>
 </div>
+<?php if(!empty($related_products)): ?>
+<div class="related-section">
+    <div class="related-title">
+        <h3>Sản phẩm đã xem / Cùng dòng</h3>
+    </div>
+    
+    <div class="related-grid">
+        <?php foreach($related_products as $rp): ?>
+            <a href="detail.php?id=<?= $rp['id'] ?>" style="text-decoration: none;">
+                <div class="related-item">
+                    <?php 
+                        // Kiểm tra ảnh sản phẩm liên quan
+                        $rp_img = !empty($rp['main_image']) ? $rp['main_image'] : 'https://via.placeholder.com/200x220?text=No+Image'; 
+                    ?>
+                    <img src="<?= htmlspecialchars($rp_img) ?>" alt="<?= htmlspecialchars($rp['name']) ?>">
+                    <div class="r-name"><?= htmlspecialchars($rp['name']) ?></div>
+                    <div class="r-price"><?= number_format($rp['price'], 0, ',', '.') ?>đ</div>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <script>
     // Đổi ảnh chính khi click Thumbnail
@@ -164,6 +205,22 @@ foreach($suppliers as $s) { if($s['id'] == $product['supplier_id']) $sup_name = 
         } else if (newVal > maxVal) {
             alert('Bạn chỉ có thể mua tối đa ' + maxVal + ' sản phẩm!');
         }
+    }
+    // Hàm Toggle Yêu thích tạm thời (UI)
+    function toggleFavorite(btn) {
+        let icon = btn.querySelector('i');
+        if (icon.classList.contains('far')) {
+            // Đổi thành tim đặc, màu đỏ
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+            btn.classList.add('active');
+        } else {
+            // Đổi lại tim rỗng
+            icon.classList.remove('fas');
+            icon.classList.add('far');
+            btn.classList.remove('active');
+        }
+        // Ghi chú: Sau này bác có thể gọi AJAX ở đây để lưu vào Database bảng favorites
     }
 </script>
 
