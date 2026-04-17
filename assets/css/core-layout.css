@@ -1,0 +1,324 @@
+/* ==========================================================================
+   FILE: nct-core-layout.css
+   CHỨC NĂNG: Khung giao diện dùng chung (Global, Header, Sidebars, Footer)
+   ========================================================================== */
+
+/* --- 1. GLOBAL & BASE STYLES --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin-top: 60px !important; /* Đẩy nội dung xuống tránh Header fixed */
+    cursor: url('/images/cursor(1).png') 0 0, auto;
+}
+
+/* Custom Cursor cho các element có thể click */
+a, button, .sidebar-item, label {
+    cursor: url('/images/hand-pointer(2).png') 0 0, pointer;
+}
+
+/* Giữ nguyên con trỏ văn bản cho input/textarea */
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], textarea, .form-input {
+    cursor: text;
+}
+
+
+/* --- 2. HEADER TỐI GIẢN --- */
+header {
+    background-color: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 60px;
+    z-index: 1000;
+}
+
+.logo-img {
+    height: 22px; /* Set cứng chiều cao để logo không bị méo */
+    object-fit: contain;
+    display: block;
+}
+
+.header-actions .form-input:focus {
+    outline: none;
+    border-color: #ff3333;
+}
+
+
+/* --- 3. KHUNG NỘI DUNG CHÍNH (MAIN CONTENT) --- */
+.main-content {
+    margin-left: 250px;  /* Né Left Sidebar */
+    margin-right: 300px; /* Né Right Sidebar (Character Guide) */
+    padding: 20px;
+    flex-grow: 1;
+}
+
+
+/* --- 4. LEFT SIDEBAR (MENU ĐIỀU HƯỚNG) --- */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 60px; /* Nằm dưới header */
+    width: 250px;
+    height: calc(100vh - 60px);
+    background-color: #fff;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px 0;
+    z-index: 40;
+    overflow-y: auto;
+}
+
+.sidebar-section { margin-bottom: 1rem; }
+
+.sidebar-title {
+    font-size: 14px;
+    color: #000;
+    padding: 12px 20px;
+    text-transform: uppercase;
+    border-bottom: 2px solid #ff3333;
+    margin-bottom: 10px;
+}
+
+.sidebar-item {
+    padding: 12px 20px;
+    color: #333;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-item:hover {
+    background-color: #f0f0f0;
+    color: #ff3333;
+    border-left-color: #ff3333;
+}
+
+.sidebar-item.active {
+    background-color: #ffe0e0;
+    color: #ff3333;
+    border-left-color: #ff3333;
+    font-weight: 600;
+}
+
+.sidebar-item i { width: 16px; text-align: center; }
+
+
+/* --- 5. RIGHT SIDEBAR (CHARACTER GUIDE / TIN TỨC) --- */
+.character-guide-container {
+    position: fixed;
+    top: 80px; /* Thấp hơn header một chút */
+    right: 0;
+    width: 300px;
+    background-color: #f5f5f5;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px;
+}
+
+.speech-bubble {
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 10px 10px 0;
+    border-style: solid;
+    border-color: #fff transparent transparent transparent;
+    filter: drop-shadow(0 1px 0 #e5e7eb);
+}
+
+.bubble-text {
+    font-size: 13px;
+    color: #374151;
+    margin: 0 0 10px 0;
+    line-height: 1.5;
+}
+
+.chat-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.chat-link:hover { background-color: #e5e7eb; color: #ff3333; }
+
+.character-image {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.character-image img {
+    width: 100%;
+    display: block;
+    transform: scaleX(-1) scale(1.5); /* Phóng to và lật ảnh như bản gốc */
+    transform-origin: top center;
+}
+
+
+/* --- 6. FOOTER --- */
+footer {
+    background-color: #1a1a1a;
+    color: #ccc;
+    border-top: 4px solid #ff3333;
+    padding: 50px 40px 20px 40px;
+    margin-top: 40px;
+    margin-left: 250px;  /* Né Left Sidebar */
+    margin-right: 300px; /* Né Right Sidebar */
+    font-size: 14px;
+    line-height: 1.6;
+    z-index: 50;
+}
+
+.footer-content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-section h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    border-left: 3px solid #ff3333;
+    padding-left: 12px;
+}
+
+.footer-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+    transition: color 0.3s ease;
+}
+.footer-info:hover { color: #fff; }
+.footer-info i { color: #ff3333; font-size: 16px; margin-top: 4px; width: 20px; text-align: center; }
+
+.footer-links { display: flex; flex-direction: column; gap: 12px; }
+.footer-links a { color: #b0b0b0; text-decoration: none; transition: all 0.3s ease; }
+.footer-links a:hover { color: #ff3333; padding-left: 8px; }
+
+.copyright-area {
+    border-top: 1px solid #333;
+    padding-top: 20px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+}
+.copyright-area span.brand { color: #fff; font-weight: bold; }
+.copyright-area span.dev { color: #ff3333; }
+
+
+/* --- 7. RESPONSIVE (MOBILE & TABLET) --- */
+@media (max-width: 1440px) {
+    .character-guide-container { display: none !important; }
+    .main-content, footer { margin-right: 0; }
+}
+
+@media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main-content, footer { margin-left: 0; }
+    footer { padding: 40px 20px; }
+    .footer-content-grid { grid-template-columns: 1fr; gap: 30px; }
+}
+/* --- CSS BANNER SLIDER (Kích thước chuẩn 1000x400) --- */
+.banner-slider {
+    width: 100%;
+    max-width: 1000px;
+    height: 400px; /* Cố định chiều cao 400px */
+    margin: 0 auto 30px auto;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+    background-color: #f0f0f0;
+}
+
+/* Track chứa các slide */
+.slides-track {
+    display: flex;
+    /* Giả sử có 3 ảnh gốc + 1 ảnh copy = 4 ảnh -> Width = 400% */
+    width: 400%; 
+    height: 100%;
+    
+    /* Tổng thời gian = 2.5s x 3 ảnh = 7.5s 
+      cubic-bezier giúp hiệu ứng trượt mượt mà ở điểm bắt đầu và kết thúc
+    */
+    animation: slide-infinite 7.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slides-track .slide {
+    /* Mỗi ảnh chiếm 1/4 (25%) của track 400% */
+    width: 25%;
+    height: 100%;
+    display: block;
+}
+
+.slides-track .slide img {
+    width: 100%;
+    height: 100%;
+    /* THẦN CHÚ CROP ẢNH: Tự động zoom và cắt phần thừa để lấp đầy 1000x400 */
+    object-fit: cover; 
+    object-position: center;
+}
+
+/* TOÁN HỌC CHO KEYFRAMES (Tổng 7.5s):
+  - Mỗi khung hình tốn 2.5s (tương đương 33.33%)
+  - Giữ ảnh đứng im trong 2s (tương đương ~26.66%)
+  - Trượt sang ảnh tiếp theo trong 0.5s
+*/
+@keyframes slide-infinite {
+    /* --- Ảnh 1 --- */
+    0%, 26.66% { transform: translateX(0%); }
+    
+    /* --- Trượt sang Ảnh 2 --- */
+    33.33%, 60% { transform: translateX(-25%); }
+    
+    /* --- Trượt sang Ảnh 3 --- */
+    66.66%, 93.33% { transform: translateX(-50%); }
+    
+    /* --- Trượt sang Ảnh 1 (Bản Copy) --- */
+    100% { transform: translateX(-75%); }
+    /* Ngay khi chạm 100%, animation sẽ lập tức reset về 0% (Ảnh 1 thật) mà mắt người không nhận ra */
+}
