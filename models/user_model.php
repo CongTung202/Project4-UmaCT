@@ -63,4 +63,55 @@ function getUserDetail($id) {
     $result = json_decode($response, true);
     return $result['data'] ?? null;
 }
+function registerUser($data) {
+    $jsonData = json_encode($data);
+    $ch = curl_init(API_URL . '/register');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($httpCode == 200) return true;
+    throw new Exception(json_decode($response, true)['detail'] ?? 'Lỗi đăng ký');
+}
+
+function loginUser($username, $password) {
+    // Đóng gói dữ liệu thành chuỗi JSON
+    $jsonData = json_encode([
+        'username' => $username, 
+        'password' => $password
+    ]);
+    
+    $ch = curl_init(API_URL . '/login');
+    
+    // CÁC CẤU HÌNH BẮT BUỘC ĐỂ GỬI POST BẰNG CURL
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true); // Ép dùng phương thức POST (Sửa lỗi 405)
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData); // Nhét dữ liệu vào body
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    
+    // Khai báo Header để Python biết đây là dữ liệu JSON
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($jsonData)
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Nếu Python trả về 200 OK -> Thành công
+    if ($httpCode == 200) {
+        $result = json_decode($response, true);
+        return $result['data'];
+    }
+    
+    // Nếu thất bại (Sai pass, khóa tài khoản...) -> Ném lỗi ra màn hình
+    $errorData = json_decode($response, true);
+    throw new Exception($errorData['detail'] ?? 'Lỗi đăng nhập từ máy chủ');
+}
 ?>

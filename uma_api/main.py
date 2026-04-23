@@ -8,6 +8,7 @@ import cloudinary
 import cloudinary.uploader
 from fastapi import UploadFile, File
 import json
+import unicodedata
 
 app = FastAPI(title="UmaCT API")
 
@@ -163,6 +164,42 @@ def create_product(product: ProductCreate):
         return {"status": "success", "message": "Thêm sản phẩm thành công!"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Lỗi: {str(e)}")
+    finally:
+        conn.close()
+def remove_accents(input_str):
+    if not input_str: return ""
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return u"".join([c for c in nfkd_form if not unicodedata.combining(c)]).lower()
+
+# 43. API: Tìm kiếm sản phẩm thông minh (Live Search)
+@app.get("/api/products/search")
+def search_products(q: str = ""):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # SỬA LỖI: Dùng Subquery lồng bảng product_images để lấy ảnh đầu tiên
+        sql = """
+            SELECT p.id, p.name, p.price, 
+                   (SELECT image_url FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as main_image 
+            FROM products p 
+            WHERE p.is_active = 1
+        """
+        cursor.execute(sql)
+        products = cursor.fetchall()
+
+        if not q.strip():
+            return {"status": "success", "data": []}
+
+        normalized_q = remove_accents(q)
+        results = []
+        
+        for p in products:
+            normalized_name = remove_accents(p['name'])
+            if normalized_q in normalized_name:
+                # Không cần gỡ rối JSON nữa vì SQL đã trả về sẵn cột main_image
+                results.append(p)
+
+        return {"status": "success", "data": results[:6]}
     finally:
         conn.close()
 # 8. API: Lấy chi tiết 1 sản phẩm theo ID
@@ -836,3 +873,53 @@ def get_dashboard_stats():
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
+class UserRegister(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    email: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+# 41. API: Đăng ký tài khoản mới (LƯU MẬT KHẨU THÔ)
+@app.post("/api/register")
+def register_user(user: UserRegister):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Kiểm tra username tồn tại chưa
+        cursor.execute("SELECT id FROM users WHERE username = %s", (user.username,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Tên tài khoản đã tồn tại!")
+
+        # Lưu trực tiếp user.password (Không mã hóa)
+        sql = "INSERT INTO users (username, password, full_name, email, role_id) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(sql, (user.username, user.password, user.full_name, user.email, 2))
+        conn.commit()
+        return {"status": "success", "message": "Đăng ký thành công!"}
+    finally:
+        conn.close()
+
+# 42. API: Đăng nhập (SO SÁNH MẬT KHẨU THÔ)
+@app.post("/api/login")
+def login_user(user: UserLogin):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM users WHERE username = %s", (user.username,))
+        db_user = cursor.fetchone()
+        
+        # Kiểm tra tài khoản tồn tại VÀ so sánh chuỗi mật khẩu trực tiếp
+        if not db_user or user.password != db_user['password']:
+            raise HTTPException(status_code=401, detail="Tài khoản hoặc mật khẩu không chính xác!")
+        
+        if db_user['status'] == 'BANNED':
+            raise HTTPException(status_code=403, detail="Tài khoản của bạn đã bị khóa!")
+
+        # Ẩn mật khẩu trước khi trả dữ liệu về cho PHP để bảo mật session
+        db_user.pop('password')
+        return {"status": "success", "data": db_user}
+    finally:
+        conn.close()
+
