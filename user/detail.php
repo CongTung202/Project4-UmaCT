@@ -157,7 +157,7 @@ $related_products = array_slice($related_products, 0, 4);
 <?php if(!empty($related_products)): ?>
 <div class="related-section">
     <div class="related-title">
-        <h3>Sản phẩm đã xem / Cùng dòng</h3>
+        <h3>Sản phẩm liên quan</h3>
     </div>
     
     <div class="related-grid">

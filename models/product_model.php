@@ -104,4 +104,17 @@ function deleteProduct($id) {
     $error = json_decode($response, true);
     throw new Exception($error['detail'] ?? 'Lỗi khi xóa sản phẩm');
 }
+function searchProducts($keyword) {
+    // encode từ khóa để truyền qua URL an toàn (hỗ trợ dấu cách)
+    $ch = curl_init(API_URL . '/products/search?q=' . urlencode($keyword));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $result = json_decode($response, true);
+    return $result['data'] ?? [];
+}
 ?>
