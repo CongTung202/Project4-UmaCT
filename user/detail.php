@@ -65,12 +65,18 @@ $related_products = array_slice($related_products, 0, 4);
     <div class="pd-info">
         <h1 class="pd-title"><?= htmlspecialchars($product['name']) ?></h1>
         
-        <div class="pd-meta">
-            <span>Thương hiệu: <strong><?= htmlspecialchars($sup_name) ?></strong></span>
-            <span>|</span>
-            <span>Dòng sản phẩm: <strong><?= htmlspecialchars($cat_name) ?></strong></span>
-            <span>|</span>
-            <span>Mã SP: <strong>#UMACT-<?= $product['id'] ?></strong></span>
+        <div class="pd-meta" style="font-size: 14px; margin-bottom: 25px;">
+            <span style="color: #666;">Thương hiệu: 
+                <a href="products.php?supplier=<?= $product['supplier_id'] ?>" style="color: #ff3333; font-weight: bold; text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='#e60000'" onmouseout="this.style.color='#ff3333'">
+                    <?= htmlspecialchars($sup_name) ?>
+                </a>
+            </span>
+            <span style="color: #ccc; margin: 0 12px;">|</span>
+            <span style="color: #666;">Dòng sản phẩm: 
+                <a href="products.php?category=<?= $product['category_id'] ?>" style="color: #ff3333; font-weight: bold; text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='#e60000'" onmouseout="this.style.color='#ff3333'">
+                    <?= htmlspecialchars($cat_name) ?>
+                </a>
+            </span>
         </div>
 
         <div class="pd-price-box">
@@ -115,8 +121,8 @@ $related_products = array_slice($related_products, 0, 4);
                         </button>
                     <?php endif; ?>
 
-                    <button type="button" class="btn-favorite" title="Thêm vào yêu thích" onclick="toggleFavorite(this)">
-                        <i class="far fa-heart"></i>
+                    <button type="button" class="btn-favorite" title="Thêm vào yêu thích" onclick="toggleFavorite(this, <?= $product['id'] ?>)">
+                            <i class="far fa-heart"></i>
                     </button>
                 </div>
             </form>
@@ -206,22 +212,53 @@ $related_products = array_slice($related_products, 0, 4);
             alert('Bạn chỉ có thể mua tối đa ' + maxVal + ' sản phẩm!');
         }
     }
-    // Hàm Toggle Yêu thích tạm thời (UI)
-    function toggleFavorite(btn) {
-        let icon = btn.querySelector('i');
-        if (icon.classList.contains('far')) {
-            // Đổi thành tim đặc, màu đỏ
-            icon.classList.remove('far');
-            icon.classList.add('fas');
-            btn.classList.add('active');
-        } else {
-            // Đổi lại tim rỗng
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            btn.classList.remove('active');
-        }
-        // Ghi chú: Sau này bác có thể gọi AJAX ở đây để lưu vào Database bảng favorites
+   // Hàm Toggle Yêu thích gọi API
+    function toggleFavorite(btn, productId) {
+        btn.style.opacity = '0.5';
+
+        fetch('ajax_favorite.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: productId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.style.opacity = '1';
+            
+            if (data.status === 'error') {
+                // SỬA Ở ĐÂY: Thay alert bằng showToast lỗi
+                showToast(data.message, 'error'); 
+                
+                if(data.message.includes('đăng nhập')) {
+                    setTimeout(() => { window.location.href = 'login.php'; }, 1500);
+                }
+                return;
+            }
+            
+            let icon = btn.querySelector('i');
+            if (data.action === 'added') {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                btn.classList.add('active');
+                
+                // SỬA Ở ĐÂY: Hiện Toast thành công
+                showToast('Đã thêm sản phẩm vào danh sách yêu thích!', 'success');
+            } else {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                btn.classList.remove('active');
+                
+                // SỬA Ở ĐÂY: Hiện Toast thông báo xóa
+                showToast('Đã bỏ yêu thích sản phẩm này.', 'success');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.style.opacity = '1';
+            showToast('Có lỗi xảy ra, vui lòng thử lại sau.', 'error');
+        });
     }
+        // Ghi chú: Sau này bác có thể gọi AJAX ở đây để lưu vào Database bảng favorites
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

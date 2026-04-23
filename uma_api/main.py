@@ -922,4 +922,29 @@ def login_user(user: UserLogin):
         return {"status": "success", "data": db_user}
     finally:
         conn.close()
+class FavoriteToggle(BaseModel):
+    user_id: int
+    product_id: int
 
+# 44. API: Thêm/Bỏ Yêu thích (Toggle Favorite)
+@app.post("/api/favorites/toggle")
+def toggle_favorite(data: FavoriteToggle):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Kiểm tra xem sản phẩm đã được user này yêu thích chưa
+        cursor.execute("SELECT id FROM favorites WHERE user_id = %s AND product_id = %s", (data.user_id, data.product_id))
+        fav = cursor.fetchone()
+        
+        if fav:
+            # Nếu đã có -> Xóa đi (Bỏ yêu thích)
+            cursor.execute("DELETE FROM favorites WHERE id = %s", (fav['id'],))
+            conn.commit()
+            return {"status": "success", "action": "removed", "message": "Đã bỏ yêu thích"}
+        else:
+            # Nếu chưa có -> Thêm vào CSDL
+            cursor.execute("INSERT INTO favorites (user_id, product_id) VALUES (%s, %s)", (data.user_id, data.product_id))
+            conn.commit()
+            return {"status": "success", "action": "added", "message": "Đã thêm vào yêu thích"}
+    finally:
+        conn.close()
