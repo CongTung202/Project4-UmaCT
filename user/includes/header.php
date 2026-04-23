@@ -122,9 +122,11 @@ $current_url = $_SERVER['REQUEST_URI'];
             <span class="badge">0</span>
         </a>
 
+        <?php $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0; ?>
+        
         <a href="<?= BASE_URL ?>/user/cart.php" class="header-icon" title="Giỏ hàng">
             <i class="fas fa-shopping-cart"></i>
-            <span class="badge">0</span>
+            <span class="badge" id="cart-badge" style="display: inline-block;"><?= $cart_count ?></span>
         </a>
 
         <?php if(isset($_SESSION['user'])): ?>
@@ -192,6 +194,16 @@ $current_url = $_SERVER['REQUEST_URI'];
         });
     </script>
 <?php require_once 'sidebar.php'; ?>
-<?php require_once 'right_sidebar.php'; ?>
 
-<main class="main-content">
+<?php 
+// 1. Khai báo các trang KHÔNG muốn hiện cột Tin tức bên phải
+$hide_right_sidebar_pages = ['cart.php', 'checkout.php'];
+$current_page = basename($_SERVER['PHP_SELF']);
+
+// 2. Chỉ gọi file right_sidebar.php nếu trang hiện tại KHÔNG nằm trong danh sách trên
+if (!in_array($current_page, $hide_right_sidebar_pages)) {
+    require_once 'right_sidebar.php'; 
+}
+?>
+
+<main class="main-content <?= in_array($current_page, $hide_right_sidebar_pages) ? 'expanded-mode' : '' ?>">

@@ -948,3 +948,56 @@ def toggle_favorite(data: FavoriteToggle):
             return {"status": "success", "action": "added", "message": "Đã thêm vào yêu thích"}
     finally:
         conn.close()
+class CartItem(BaseModel):
+    user_id: int
+    product_id: int
+    quantity: int
+
+# 45. API: Lấy giỏ hàng của người dùng (Có JOIN để lấy thông tin sản phẩm)
+@app.get("/api/cart/{user_id}")
+def get_user_cart(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = """
+            SELECT c.id as cart_id, c.quantity, p.*,
+                   (SELECT image_url FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as main_image
+            FROM cart c
+            JOIN products p ON c.product_id = p.id
+            WHERE c.user_id = %s
+        """
+        cursor.execute(sql, (user_id,))
+        items = cursor.fetchall()
+        return {"status": "success", "data": items}
+    finally:
+        conn.close()
+
+# 46. API: Thêm/Cập nhật sản phẩm vào giỏ hàng DB
+@app.post("/api/cart/add")
+def add_to_cart_db(item: CartItem):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Sử dụng lệnh ON DUPLICATE KEY UPDATE để tự động cộng dồn nếu sản phẩm đã có
+        sql = """
+            INSERT INTO cart (user_id, product_id, quantity) 
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)
+        """
+        cursor.execute(sql, (item.user_id, item.product_id, item.quantity))
+        conn.commit()
+        return {"status": "success", "message": "Đã cập nhật giỏ hàng trong DB"}
+    finally:
+        conn.close()
+
+# 47. API: Xóa 1 sản phẩm khỏi giỏ hàng DB
+@app.delete("/api/cart/remove/{user_id}/{product_id}")
+def remove_from_cart_db(user_id: int, product_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM cart WHERE user_id = %s AND product_id = %s", (user_id, product_id))
+        conn.commit()
+        return {"status": "success", "message": "Đã xóa khỏi giỏ hàng"}
+    finally:
+        conn.close()

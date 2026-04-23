@@ -1,0 +1,150 @@
+/* --- TRANG GIỎ HÀNG UMACT --- */
+.cart-container {
+    display: grid;
+    /* Cột trái tự do giãn (1fr), Cột phải rộng đúng 300px (Bằng kích thước right_sidebar) */
+    grid-template-columns: 1fr 300px; 
+    gap: 30px;
+    margin-top: 20px;
+    width: 100%; /* Bắt buộc chiếm trọn 100% không gian khả dụng */
+    /* Đã xóa max-width và margin-auto để không bị ép vào giữa nữa */
+}
+
+.cart-main {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    /* Đã xóa overflow-x: auto để xóa sổ cái thanh cuộn ngang dưới đáy bảng */
+}
+
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cart-table th {
+    text-align: left;
+    padding: 15px 10px;
+    border-bottom: 2px solid #eee;
+    color: #666;
+    font-size: 14px;
+}
+
+.cart-item {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cart-item td {
+    padding: 20px 10px;
+    vertical-align: middle;
+}
+
+
+.cart-product-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.cart-product-info img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.cart-price { color: #ff3333; font-weight: bold; }
+
+.btn-remove {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-remove:hover { color: #ff3333; }
+
+/* Tóm tắt thanh toán */
+.cart-summary {
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 15px;
+}
+
+.total-price {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ff3333;
+}
+
+.btn-checkout {
+    width: 100%;
+    background: #ff3333;
+    color: #fff;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: 0.3s;
+}
+/* --- CHỈNH LẠI BẢNG GIỎ HÀNG CHO CÂN ĐỐI --- */
+.cart-table th {
+    text-transform: uppercase;
+    background-color: #fcfcfc;
+}
+
+/* Ẩn mũi tên lên/xuống mặc định xấu xí của thẻ input number */
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.qty-input {
+    -moz-appearance: textfield; /* Cho Firefox */
+    width: 50px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Căn chỉnh lại Checkbox cho ngay ngắn */
+.cart-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-top: 5px;
+}
+
+/* Làm nổi bật Tên sản phẩm */
+.cart-product-name {
+    font-size: 14px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Cắt chữ nếu tên dài quá 2 dòng */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.btn-checkout:hover { background: #e60000; }
+
+@media (max-width: 992px) {
+    .cart-container { grid-template-columns: 1fr; }
+}

@@ -1,4 +1,9 @@
-</main> <footer>
+</main> 
+<?php 
+  $hide_side_pages = ['cart.php', 'checkout.php'];
+  $is_expanded = in_array(basename($_SERVER['PHP_SELF']), $hide_side_pages);
+?>
+<footer class="<?= $is_expanded ? 'expanded-mode' : '' ?>">
     <div class="footer-content-grid">
         <div class="footer-section">
             <h3>Liên hệ UmaCT</h3>
@@ -72,6 +77,11 @@
 
 .umact-toast.error { border-left: 4px solid #e74c3c; }
 .umact-toast.error i { color: #e74c3c; font-size: 18px; }
+.main-content.expanded-mode, 
+footer.expanded-mode {
+    margin-right: 30px !important;
+    max-width: 100%;
+}
 </style>
 
 <div id="toast-container"></div>

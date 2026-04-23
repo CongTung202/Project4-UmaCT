@@ -60,7 +60,7 @@ header {
 
 /* --- 3. KHUNG NỘI DUNG CHÍNH (MAIN CONTENT) --- */
 .main-content {
-    margin-left: 250px;  /* Né Left Sidebar */
+    margin-left: 120px;  /* Né Left Sidebar */
     margin-right: 300px; /* Né Right Sidebar (Character Guide) */
     padding: 20px;
     flex-grow: 1;
@@ -193,7 +193,11 @@ header {
     transform-origin: top center;
 }
 
-
+/* Kéo giãn giao diện khi ẩn cột phải (Right Sidebar) */
+        .main-content.expanded-mode {
+            margin-right: 30px !important; /* Xóa khoảng trống 300px của cột phải */
+            max-width: 100%;
+        }
 /* --- 6. FOOTER --- */
 footer {
     background-color: #1a1a1a;

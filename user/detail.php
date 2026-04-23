@@ -108,13 +108,15 @@ $related_products = array_slice($related_products, 0, 4);
 
                 <div class="action-group">
                     <?php if($product['stock_quantity'] > 0 && $product['is_active']): ?>
-                        <button type="submit" name="action" value="add" class="btn-add-cart">
-                             Thêm vào giỏ
+                        
+                        <button type="button" class="btn-add-cart" onclick="addToCart('add')">
+                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </button>
                         
-                        <button type="submit" name="action" value="buy_now" class="btn-buy-now">
-                             Mua ngay
+                        <button type="button" class="btn-buy-now" onclick="addToCart('buy_now')">
+                            <i class="fas fa-bolt"></i> Mua ngay
                         </button>
+
                     <?php else: ?>
                         <button type="button" class="btn-buy-now" style="background: #ccc; border-color: #ccc; cursor: not-allowed; flex: 2;">
                             TẠM HẾT HÀNG
@@ -122,7 +124,7 @@ $related_products = array_slice($related_products, 0, 4);
                     <?php endif; ?>
 
                     <button type="button" class="btn-favorite" title="Thêm vào yêu thích" onclick="toggleFavorite(this, <?= $product['id'] ?>)">
-                            <i class="far fa-heart"></i>
+                        <i class="far fa-heart"></i>
                     </button>
                 </div>
             </form>
@@ -258,7 +260,61 @@ $related_products = array_slice($related_products, 0, 4);
             showToast('Có lỗi xảy ra, vui lòng thử lại sau.', 'error');
         });
     }
-        // Ghi chú: Sau này bác có thể gọi AJAX ở đây để lưu vào Database bảng favorites
+    // 2. HÀM XỬ LÝ GIỎ HÀNG (AJAX) - CÁI MÀ BÁC ĐANG BỊ THIẾU
+    function addToCart(action) {
+        // Lấy ID sản phẩm và số lượng người dùng chọn
+        const productId = document.querySelector('input[name="product_id"]').value;
+        const quantity = document.getElementById('qtyInput').value;
+        
+        // Tạo hiệu ứng loading cho nút bấm
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        btn.style.pointerEvents = 'none';
+
+        fetch('ajax_cart.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                product_id: productId, 
+                quantity: quantity,
+                action: action
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Khôi phục nút bấm
+            btn.innerHTML = originalHtml;
+            btn.style.pointerEvents = 'auto';
+
+            if (data.status === 'success') {
+                showToast(data.message, 'success');
+                
+                // Cập nhật con số màu đỏ trên Header
+                const cartBadge = document.getElementById('cart-badge');
+                if (cartBadge) {
+                    cartBadge.innerText = data.total_items;
+                    cartBadge.style.transition = 'transform 0.2s';
+                    cartBadge.style.transform = 'scale(1.5)';
+                    setTimeout(() => { cartBadge.style.transform = 'scale(1)'; }, 200);
+                }
+
+                // Nếu khách bấm "Mua ngay", lập tức chuyển hướng sang trang cart.php
+                if (data.action === 'buy_now') {
+                    setTimeout(() => { window.location.href = 'cart.php'; }, 500);
+                }
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerHTML = originalHtml;
+            btn.style.pointerEvents = 'auto';
+            showToast('Lỗi kết nối, vui lòng thử lại!', 'error');
+        });
+    }
 </script>
+      
 
 <?php require_once 'includes/footer.php'; ?>
