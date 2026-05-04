@@ -36,7 +36,7 @@ $categories = getAllCategories();
         </a>
         
         <!-- Yêu thích -->
-        <a href="<?= BASE_URL ?>/user/profile.php#favorites" class="sidebar-item <?= (strpos($current_url, 'favorites') !== false) ? 'active' : '' ?>">
+        <a href="<?= BASE_URL ?>/user/favorite.php" class="sidebar-item <?= (strpos($current_url, 'favorites') !== false) ? 'active' : '' ?>">
             <i class="fas fa-heart"></i> Yêu thích
         </a>
     </div>

@@ -1075,3 +1075,29 @@ def get_user_orders_list(user_id: int):
         return {"status": "success", "data": orders}
     finally:
         conn.close()
+# 51. API: Lấy danh sách sản phẩm yêu thích của user
+@app.get("/api/users/{user_id}/favorites")
+def get_user_favorites(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # Dùng JOIN để nối bảng favorites với products, và Subquery để lấy ảnh
+        sql = """
+            SELECT p.*, f.id as favorite_id,
+                   (SELECT image_url FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as main_image
+            FROM favorites f
+            JOIN products p ON f.product_id = p.id
+            WHERE f.user_id = %s
+            ORDER BY f.id DESC
+        """
+        cursor.execute(sql, (user_id,))
+        favorites = cursor.fetchall()
+
+        # Gán ảnh mặc định nếu sản phẩm chưa có ảnh
+        for item in favorites:
+            if not item['main_image']:
+                item['main_image'] = 'https://via.placeholder.com/200x220?text=No+Image'
+                
+        return {"status": "success", "data": favorites}
+    finally:
+        conn.close()
