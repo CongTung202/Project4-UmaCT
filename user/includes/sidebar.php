@@ -21,6 +21,26 @@ $categories = getAllCategories();
         </a>
     </div>
 
+    <!-- KHU VỰC MỚI: TÀI KHOẢN & MUA SẮM -->
+    <div class="sidebar-section">
+        <div class="sidebar-title">Cá nhân & Mua sắm</div>
+        
+        <!-- Giỏ hàng (Sáng lên cả khi đang ở trang Checkout) -->
+        <a href="<?= BASE_URL ?>/user/cart.php" class="sidebar-item <?= (strpos($current_url, '/cart.php') !== false || strpos($current_url, '/checkout.php') !== false) ? 'active' : '' ?>">
+            <i class="fas fa-shopping-cart"></i> Giỏ hàng
+        </a>
+        
+        <!-- Đơn hàng (Sáng lên cả khi đang xem Chi tiết đơn hàng) -->
+        <a href="<?= BASE_URL ?>/user/order_history.php" class="sidebar-item <?= (strpos($current_url, '/order_history.php') !== false || strpos($current_url, '/order_detail.php') !== false) ? 'active' : '' ?>">
+            <i class="fas fa-file-invoice-dollar"></i> Đơn hàng của tôi
+        </a>
+        
+        <!-- Yêu thích -->
+        <a href="<?= BASE_URL ?>/user/profile.php#favorites" class="sidebar-item <?= (strpos($current_url, 'favorites') !== false) ? 'active' : '' ?>">
+            <i class="fas fa-heart"></i> Yêu thích
+        </a>
+    </div>
+
     <div class="sidebar-section">
         <div class="sidebar-title">Danh Mục</div>
         <?php foreach($categories as $cat): ?>

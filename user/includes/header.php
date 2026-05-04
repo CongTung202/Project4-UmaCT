@@ -197,7 +197,13 @@ $current_url = $_SERVER['REQUEST_URI'];
 
 <?php 
 // 1. Khai báo các trang KHÔNG muốn hiện cột Tin tức bên phải
-$hide_right_sidebar_pages = ['cart.php', 'checkout.php'];
+$hide_right_sidebar_pages = ['cart.php', 
+    'checkout.php', 
+    'order_success.php', 
+    'profile.php', 
+    'order_history.php', 
+    'order_detail.php', 
+    'favorite.php'];
 $current_page = basename($_SERVER['PHP_SELF']);
 
 // 2. Chỉ gọi file right_sidebar.php nếu trang hiện tại KHÔNG nằm trong danh sách trên

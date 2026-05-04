@@ -1,6 +1,14 @@
 </main> 
 <?php 
-  $hide_side_pages = ['cart.php', 'checkout.php'];
+$hide_side_pages = [
+      'cart.php', 
+      'checkout.php', 
+      'order_success.php', 
+      'profile.php', 
+      'order_history.php', 
+      'order_detail.php', 
+      'favorite.php'
+  ];
   $is_expanded = in_array(basename($_SERVER['PHP_SELF']), $hide_side_pages);
 ?>
 <footer class="<?= $is_expanded ? 'expanded-mode' : '' ?>">
