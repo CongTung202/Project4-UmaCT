@@ -392,44 +392,47 @@ def get_orders():
     return {"status": "success", "data": orders}
 
 # 17. API: Lấy chi tiết 1 đơn hàng (Bao gồm thông tin chung và danh sách sản phẩm)
+# API: Lấy chi tiết một đơn hàng
 @app.get("/api/orders/{order_id}")
 def get_order_detail(order_id: int):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # 1. Lấy thông tin chung của đơn hàng
-    sql_order = """
-        SELECT o.*, u.full_name, u.email, u.phone 
-        FROM orders o
-        JOIN users u ON o.user_id = u.id
-        WHERE o.id = %s
-    """
-    cursor.execute(sql_order, (order_id,))
-    order_info = cursor.fetchone()
-    
-    if not order_info:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+    # Nhớ dùng DictCursor để trả về dạng Dictionary
+    cursor = conn.cursor(pymysql.cursors.DictCursor) 
+    try:
+        # 1. Lấy thông tin chung của hóa đơn (Bảng orders)
+        sql_order = """
+            SELECT o.*, u.full_name, u.phone 
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.id = %s
+        """
+        cursor.execute(sql_order, (order_id,))
+        order_info = cursor.fetchone()
         
-    # 2. Lấy danh sách sản phẩm trong đơn hàng đó (order_items)
-    sql_items = """
-        SELECT oi.*, p.name as product_name, p.image_url 
-        FROM order_items oi
-        JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = %s
-    """
-    cursor.execute(sql_items, (order_id,))
-    items = cursor.fetchall()
-    conn.close()
-    
-    # Gộp chung vào 1 response
-    return {
-        "status": "success", 
-        "data": {
-            "order_info": order_info,
-            "items": items
-        }
-    }
+        if not order_info:
+            return {"status": "error", "message": "Không tìm thấy đơn hàng"}
+
+        # 2. Lấy danh sách sản phẩm và ảnh
+        # Sử dụng Subquery để lấy 1 ảnh đầu tiên (LIMIT 1) từ bảng product_images
+        sql_items = """
+            SELECT oi.product_id, oi.quantity, oi.price_at_purchase, 
+                   p.name as product_name, 
+                   (SELECT image_url FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as image_url
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = %s
+        """
+        cursor.execute(sql_items, (order_id,))
+        items = cursor.fetchall()
+        
+        # 3. Kiểm tra nếu sản phẩm nào không có ảnh thì gán ảnh mặc định
+        for item in items:
+            if not item['image_url']:
+                item['image_url'] = 'https://via.placeholder.com/50'
+                
+        return {"status": "success", "data": {"order_info": order_info, "items": items}}
+    finally:
+        conn.close()
 
 # 18. API: Cập nhật trạng thái đơn hàng
 @app.put("/api/orders/{order_id}/status")
@@ -999,5 +1002,76 @@ def remove_from_cart_db(user_id: int, product_id: int):
         cursor.execute("DELETE FROM cart WHERE user_id = %s AND product_id = %s", (user_id, product_id))
         conn.commit()
         return {"status": "success", "message": "Đã xóa khỏi giỏ hàng"}
+    finally:
+        conn.close()
+# Model cho việc cập nhật Profile nhanh khi Checkout
+class UserProfileUpdate(BaseModel):
+    full_name: str
+    address: str
+    phone: str
+
+# Model cho việc tạo đơn hàng
+class OrderCreate(BaseModel):
+    user_id: int
+    total_price: float
+    shipping_address: str
+    payment_method: int # 1: COD, 2: Chuyển khoản...
+    items: list # Danh sách các sản phẩm {product_id, quantity, price}
+
+# 48. API: Cập nhật nhanh Profile từ trang Checkout
+@app.put("/api/users/{user_id}/profile-lite")
+def update_profile_lite(user_id: int, profile: UserProfileUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Chỉ cập nhật nếu trường cũ đang trống hoặc cập nhật mới luôn
+        sql = "UPDATE users SET full_name = %s, address = %s, phone = %s WHERE id = %s"
+        cursor.execute(sql, (profile.full_name, profile.address, profile.phone, user_id))
+        conn.commit()
+        return {"status": "success", "message": "Đã cập nhật thông tin cá nhân"}
+    finally:
+        conn.close()
+
+# 49. API: Tạo đơn hàng mới
+@app.post("/api/orders")
+def create_order(order: OrderCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # 1. Chèn vào bảng orders
+        sql_order = "INSERT INTO orders (user_id, total_price, shipping_address, payment_method, status) VALUES (%s, %s, %s, %s, 'PENDING')"
+        cursor.execute(sql_order, (order.user_id, order.total_price, order.shipping_address, order.payment_method))
+        order_id = cursor.lastrowid
+        
+        # 2. Chèn vào bảng order_items
+        sql_items = "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (%s, %s, %s, %s)"
+        for item in order.items:
+            # SỬA LỖI Ở ĐÂY: Thay item['product_id'] thành item['id']
+            cursor.execute(sql_items, (order_id, item['id'], item['quantity'], item['price']))
+            
+        # 3. Xóa các sản phẩm này khỏi giỏ hàng sau khi đặt thành công
+        sql_clear_cart = "DELETE FROM cart WHERE user_id = %s AND product_id = %s"
+        for item in order.items:
+            # SỬA LỖI Ở ĐÂY: Thay item['product_id'] thành item['id']
+            cursor.execute(sql_clear_cart, (order.user_id, item['id']))
+            
+        conn.commit()
+        return {"status": "success", "order_id": order_id}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# 50. API: Lấy danh sách đơn hàng của một người dùng cụ thể
+@app.get("/api/users/{user_id}/orders")
+def get_user_orders_list(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Lấy các đơn hàng của user, sắp xếp mới nhất lên đầu
+        sql = "SELECT * FROM orders WHERE user_id = %s ORDER BY created_at DESC"
+        cursor.execute(sql, (user_id,))
+        orders = cursor.fetchall()
+        return {"status": "success", "data": orders}
     finally:
         conn.close()
