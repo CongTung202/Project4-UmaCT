@@ -26,7 +26,7 @@ if (isset($_SESSION['user'])) {
 }
 ?>
 
-<div class="main-content">
+<div style="width: 100%;">
     <h2 style="margin-bottom: 20px;">Giỏ hàng của bạn (<?= count($cart_items) ?> sản phẩm)</h2>
 
     <?php if (empty($cart_items)): ?>
@@ -36,24 +36,24 @@ if (isset($_SESSION['user'])) {
             <a href="products.php" style="color: #ff3333; text-decoration: none; font-weight: bold;">Tiếp tục mua sắm</a>
         </div>
     <?php else: ?>
-        <div class="cart-container">
+        <form action="checkout.php" method="POST" class="cart-container">
             <div class="cart-main">
                 <table class="cart-table">
                     <thead>
                         <tr>
                             <th width="5%"><input type="checkbox" id="selectAll" class="cart-checkbox" checked></th>
-                            <th width="50%">Sản phẩm</th>
-                            <th width="15%">Đơn giá</th>
-                            <th width="15%">Số lượng</th>
-                            <th width="15%">Thành tiền</th>
-                            <th width="5%"></th>
+                            <th width="45%">Sản phẩm</th>
+                            <th width="15%" style="text-align: center;">Đơn giá</th>
+                            <th width="15%" style="text-align: center;">Số lượng</th>
+                            <th width="15%" style="text-align: center;">Thành tiền</th>
+                            <th width="5%" style="text-align: center;">Xóa</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach($cart_items as $item): ?>
                         <tr class="cart-item" data-id="<?= $item['id'] ?>">
                             <td>
-                                <input type="checkbox" class="cart-checkbox item-check" checked 
+                                <input type="checkbox" name="selected_items[]" value="<?= $item['id'] ?>" class="cart-checkbox item-check" checked 
                                        data-price="<?= $item['price'] ?>" 
                                        data-qty="<?= $item['quantity'] ?>">
                             </td>
@@ -63,22 +63,20 @@ if (isset($_SESSION['user'])) {
                                     <span class="cart-product-name"><?= htmlspecialchars($item['name']) ?></span>
                                 </div>
                             </td>
-                            <td><span class="cart-price"><?= number_format($item['price'], 0, ',', '.') ?>đ</span></td>
-                            <td>
-                                <div class="qty-selector" style="transform: scale(0.8); margin: 0;">
-                                    <input type="number" class="qty-input" value="<?= $item['quantity'] ?>" readonly style="background: none;">
-                                </div>
+                            <td align="center"><span class="cart-price"><?= number_format($item['price'], 0, ',', '.') ?>đ</span></td>
+                            <td align="center">
+                                <input type="number" class="qty-input" value="<?= $item['quantity'] ?>" readonly>
                             </td>
-                            <td><span class="cart-price item-total"><?= number_format($item['price'] * $item['quantity'], 0, ',', '.') ?>đ</span></td>
-                            <td>
-                                <button class="btn-remove" title="Xóa khỏi giỏ"><i class="fas fa-trash-alt"></i></button>
+                            <td align="center"><span class="cart-price item-total"><?= number_format($item['price'] * $item['quantity'], 0, ',', '.') ?>đ</span></td>
+                            <td align="center">
+                                <button type="button" class="btn-remove" title="Xóa khỏi giỏ"><i class="fas fa-trash-alt"></i></button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-
+            
             <div class="cart-summary">
                 <h3 style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">Tạm tính</h3>
                 
@@ -97,10 +95,10 @@ if (isset($_SESSION['user'])) {
                     <span class="total-price" id="finalTotal">0đ</span>
                 </div>
 
-                <button class="btn-checkout">Tiến hành đặt hàng</button>
+                <button type="submit" class="btn-checkout">Tiến hành đặt hàng</button>
                 <p style="font-size: 12px; color: #999; text-align: center; margin-top: 15px;">(Giá đã bao gồm VAT nếu có)</p>
             </div>
-        </div>
+        </form>
     <?php endif; ?>
 </div>
 
