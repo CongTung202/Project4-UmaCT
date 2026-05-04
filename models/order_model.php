@@ -11,16 +11,14 @@ function getAllOrders() {
     return $result['data'] ?? [];
 }
 
-// Lấy chi tiết đơn hàng (gồm thông tin và danh sách món hàng)
-function getOrderDetail($id) {
-    $ch = curl_init(API_URL . '/orders/' . $id);
+// Lấy chi tiết 1 đơn hàng (Thông tin chung + Danh sách sản phẩm)
+function getOrderDetail($order_id) {
+    $ch = curl_init(API_URL . '/orders/' . $order_id);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $response = curl_exec($ch);
     curl_close($ch);
-
-    $result = json_decode($response, true);
-    return $result['data'] ?? null; // Trả về mảng chứa 'order_info' và 'items'
+    return json_decode($response, true)['data'] ?? null;
 }
 
 // Cập nhật trạng thái đơn hàng
@@ -59,4 +57,15 @@ function deleteOrder($id) {
     $error = json_decode($response, true);
     throw new Exception($error['detail'] ?? 'Lỗi khi xóa đơn hàng');
 }
+// Lấy danh sách đơn hàng của user
+function getUserOrders($user_id) {
+    $ch = curl_init(API_URL . '/users/' . $user_id . '/orders');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($response, true)['data'] ?? [];
+}
+
+
 ?>
