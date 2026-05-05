@@ -23,7 +23,7 @@ $recent_articles = array_slice($articles, 0, 2);
                 <?= strip_tags($article['content']) ?>
             </div>
             
-            <a href="<?= BASE_URL ?>/user/article.php?id=<?= $article['id'] ?>" class="chat-link">
+            <a href="<?= BASE_URL ?>/user/article_detail.php?id=<?= $article['id'] ?>" class="chat-link">
                 Xem chi tiết <i class="fas fa-arrow-right"></i>
             </a>
         </div>

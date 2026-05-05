@@ -1156,3 +1156,47 @@ def reply_product_review(review_id: int, reply: ReviewReply):
         return {"status": "error", "message": str(e)}
     finally:
         conn.close()
+# ==========================================
+# NHÓM API BÀI VIẾT (TIN TỨC)
+# ==========================================
+
+# 55. Lấy danh sách tất cả bài viết
+@app.get("/api/articles")
+def get_articles():
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # JOIN với users để lấy tên tác giả
+        sql = """
+            SELECT a.id, a.title, a.created_at, u.full_name as author_name
+            FROM articles a
+            JOIN users u ON a.author_id = u.id
+            ORDER BY a.created_at DESC
+        """
+        cursor.execute(sql)
+        articles = cursor.fetchall()
+        return {"status": "success", "data": articles}
+    finally:
+        conn.close()
+
+# 56. Lấy chi tiết một bài viết
+@app.get("/api/articles/{article_id}")
+def get_article_detail(article_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        sql = """
+            SELECT a.*, u.full_name as author_name
+            FROM articles a
+            JOIN users u ON a.author_id = u.id
+            WHERE a.id = %s
+        """
+        cursor.execute(sql, (article_id,))
+        article = cursor.fetchone()
+        
+        if not article:
+            return {"status": "error", "message": "Không tìm thấy bài viết"}
+            
+        return {"status": "success", "data": article}
+    finally:
+        conn.close()

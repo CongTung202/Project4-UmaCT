@@ -5,8 +5,8 @@ function getAllArticles() {
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $response = curl_exec($ch);
     curl_close($ch);
-    $result = json_decode($response, true);
-    return $result['data'] ?? [];
+    $res = json_decode($response, true);
+    return $res['data'] ?? [];
 }
 
 function getArticleById($id) {
@@ -15,8 +15,8 @@ function getArticleById($id) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $response = curl_exec($ch);
     curl_close($ch);
-    $result = json_decode($response, true);
-    return $result['data'] ?? null;
+    $res = json_decode($response, true);
+    return $res['data'] ?? null;
 }
 
 function addArticle($data) {
