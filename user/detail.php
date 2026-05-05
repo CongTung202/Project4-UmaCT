@@ -42,6 +42,13 @@ foreach ($all_products as $p) {
 }
 // Chỉ lấy ngẫu nhiên/mới nhất 4 sản phẩm để show cho đẹp
 $related_products = array_slice($related_products, 0, 4);
+// Lấy danh sách bình luận
+$ch_reviews = curl_init(API_URL . '/products/' . $id . '/reviews');
+curl_setopt($ch_reviews, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch_reviews, CURLOPT_SSL_VERIFYPEER, false);
+$res_reviews = curl_exec($ch_reviews);
+curl_close($ch_reviews);
+$reviews = json_decode($res_reviews, true)['data'] ?? [];
 ?>
 
 <div class="product-detail-container">
@@ -159,7 +166,7 @@ $related_products = array_slice($related_products, 0, 4);
 <div class="pd-description">
     <h3>Thông tin chi tiết</h3>
     <div class="pd-desc-content">
-        <?= !empty($product['description']) ? htmlspecialchars($product['description']) : 'Chưa có thông tin mô tả cho sản phẩm này.' ?>
+        <?= !empty($product['description']) ? $product['description'] : 'Chưa có thông tin mô tả cho sản phẩm này.' ?>
     </div>
 </div>
 <?php if(!empty($related_products)): ?>
@@ -316,5 +323,235 @@ $related_products = array_slice($related_products, 0, 4);
     }
 </script>
       
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Tìm tất cả các thẻ oembed do CKEditor tạo ra
+    const mediaElements = document.querySelectorAll('oembed[url]');
+    
+    mediaElements.forEach(el => {
+        const url = el.getAttribute('url');
+        let iframeSrc = '';
+        
+        // Kiểm tra xem có phải link YouTube không
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            // Tách lấy ID của video YouTube
+            const videoId = url.split(/v\/|v=|youtu\.be\//)[1].split(/[?&]/)[0];
+            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
+        }
+        
+        // Nếu lấy được link chuẩn, tạo thẻ iframe để thay thế
+        if (iframeSrc) {
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('src', iframeSrc);
+            iframe.setAttribute('width', '100%');
+            iframe.setAttribute('height', '450'); // Chiều cao video
+            iframe.setAttribute('frameborder', '0');
+            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+            iframe.setAttribute('allowfullscreen', 'true');
+            iframe.style.borderRadius = '12px'; // Bo góc video cho đẹp
+            iframe.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+            iframe.style.marginTop = '15px';
+            iframe.style.marginBottom = '15px';
+            
+            // Thay thế thẻ oembed vô dụng bằng thẻ iframe xịn xò
+            el.parentNode.replaceChild(iframe, el);
+        }
+    });
+});
+</script>
 
+<style>
+    /* Chỉnh lại thẻ figure bọc ngoài video để nó căn giữa và tràn viền đẹp mắt */
+    .product-description-content figure.media {
+        margin: 20px 0;
+        width: 100%;
+        text-align: center;
+    }
+</style>
+<!-- ================= PHẦN ĐÁNH GIÁ SẢN PHẨM ================= -->
+<div style="margin-top: 50px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    <h3 style="margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Đánh giá sản phẩm (<?= count($reviews) ?>)</h3>
+
+    <!-- Form viết bình luận -->
+    <?php if (isset($_SESSION['user'])): ?>
+        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <b style="font-size: 15px;">Chất lượng sản phẩm:</b>
+                <div class="star-rating" id="star-rating" style="color: #ccc; font-size: 20px; cursor: pointer;">
+                    <i class="fas fa-star" data-value="1"></i>
+                    <i class="fas fa-star" data-value="2"></i>
+                    <i class="fas fa-star" data-value="3"></i>
+                    <i class="fas fa-star" data-value="4"></i>
+                    <i class="fas fa-star" data-value="5"></i>
+                </div>
+                <input type="hidden" id="review_rating" value="5"> <!-- Mặc định 5 sao -->
+            </div>
+            
+            <textarea id="review_comment" class="form-control" rows="3" placeholder="Xin mời chia sẻ cảm nhận của bác về mô hình này..." style="width: 100%; margin-bottom: 10px; border-radius: 6px; padding: 10px;"></textarea>
+            
+            <button id="btnSubmitReview" onclick="submitReview()" style="background: #ff3333; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                <i class="fas fa-paper-plane"></i> Gửi đánh giá
+            </button>
+        </div>
+    <?php else: ?>
+        <div style="text-align: center; padding: 20px; background: #fff3f3; color: #ff3333; border-radius: 8px; margin-bottom: 30px; border: 1px dashed #ffb3b3;">
+            Vui lòng <a href="login.php" style="font-weight: bold; text-decoration: underline;">Đăng nhập</a> để tham gia bình luận!
+        </div>
+    <?php endif; ?>
+
+<!-- Danh sách bình luận -->
+    <div id="reviews-list">
+        <?php if (empty($reviews)): ?>
+            <p style="color: #888; text-align: center; font-style: italic;">Chưa có đánh giá nào. Hãy trở thành người đầu tiên review sản phẩm này!</p>
+        <?php else: ?>
+            <?php foreach ($reviews as $rev): ?>
+                <div style="display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                    <!-- Avatar Khách -->
+                    <div style="width: 45px; height: 45px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #888; overflow: hidden;">
+                        <?= $rev['avatar_url'] ? '<img src="'.$rev['avatar_url'].'" style="width:100%;height:100%;object-fit:cover;">' : '<i class="fas fa-user"></i>' ?>
+                    </div>
+                    
+                    <div style="flex: 1;">
+                        <!-- Thông tin khách bình luận -->
+                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">
+                            <?= htmlspecialchars($rev['full_name'] ?: $rev['username']) ?>
+                        </div>
+                        <div style="color: #ffca28; font-size: 12px; margin-bottom: 8px;">
+                            <?php for($i=1; $i<=5; $i++): ?>
+                                <i class="<?= $i <= $rev['rating'] ? 'fas' : 'far' ?> fa-star"></i>
+                            <?php endfor; ?>
+                        </div>
+                        <div style="color: #444; font-size: 14px; line-height: 1.5; margin-bottom: 5px;">
+                            <?= nl2br(htmlspecialchars($rev['comment'])) ?>
+                        </div>
+                        <div style="color: #aaa; font-size: 11px; margin-bottom: 10px;">
+                            <?= date('d/m/Y H:i', strtotime($rev['created_at'])) ?>
+                        </div>
+
+                        <!-- KHU VỰC HIỂN THỊ CÂU TRẢ LỜI CỦA SHOP -->
+                        <?php if (!empty($rev['staff_reply'])): ?>
+                            <div style="background: #f1f8e9; border-left: 3px solid #7cb342; padding: 12px 15px; border-radius: 0 8px 8px 0; margin-top: 10px;">
+                                <div style="font-weight: bold; font-size: 13px; color: #558b2f; margin-bottom: 5px;">
+                                    <i class="fas fa-store"></i> Phản hồi từ UmaCT:
+                                </div>
+                                <div style="font-size: 13px; color: #333; line-height: 1.5;">
+                                    <?= nl2br(htmlspecialchars($rev['staff_reply'])) ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <!-- NẾU CHƯA CÓ TRẢ LỜI VÀ USER LÀ STAFF/ADMIN THÌ HIỆN FORM -->
+                            <?php if (isset($_SESSION['user']) && in_array($_SESSION['user']['role_id'], [1, 3])): ?>
+                                <button onclick="toggleReplyForm(<?= $rev['id'] ?>)" style="background: none; border: none; color: #3498db; font-size: 12px; font-weight: bold; cursor: pointer; padding: 0;">
+                                    <i class="fas fa-reply"></i> Phản hồi
+                                </button>
+                                
+                                <div id="reply-form-<?= $rev['id'] ?>" style="display: none; margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                                    <textarea id="reply-text-<?= $rev['id'] ?>" class="form-control" rows="2" placeholder="Nhập câu trả lời của shop..." style="width: 100%; border-radius: 4px; padding: 8px; font-size: 13px; margin-bottom: 8px;"></textarea>
+                                    <button onclick="submitStaffReply(<?= $rev['id'] ?>)" style="background: #3498db; color: white; border: none; padding: 6px 15px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                                        Gửi phản hồi
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+<script>
+// --- LOGIC CHỌN SAO ---
+const stars = document.querySelectorAll('#star-rating .fa-star');
+const ratingInput = document.getElementById('review_rating');
+
+// Mặc định bôi vàng 5 sao ban đầu
+stars.forEach(s => s.style.color = '#ffca28');
+
+stars.forEach(star => {
+    star.addEventListener('click', function() {
+        const value = this.getAttribute('data-value');
+        ratingInput.value = value;
+        // Bôi màu lại: Số sao <= value thì màu vàng, lớn hơn thì màu xám
+        stars.forEach(s => {
+            if (s.getAttribute('data-value') <= value) {
+                s.style.color = '#ffca28';
+                s.classList.replace('far', 'fas');
+            } else {
+                s.style.color = '#ccc';
+                s.classList.replace('fas', 'far'); // Có thể dùng sao rỗng
+            }
+        });
+    });
+});
+
+// --- LOGIC GỬI BÌNH LUẬN BẰNG AJAX ---
+function submitReview() {
+    const comment = document.getElementById('review_comment').value.trim();
+    const rating = ratingInput.value;
+    const productId = <?= $id ?>; // Lấy ID sản phẩm từ PHP
+
+    if (!comment) {
+        showToast('Bác chưa viết cảm nhận kìa!', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btnSubmitReview');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+    btn.disabled = true;
+
+    fetch('ajax_review.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, rating: rating, comment: comment })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000); // Tải lại trang sau 1s để hiện bình luận
+        } else {
+            showToast(data.message, 'error');
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gửi đánh giá';
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        showToast('Lỗi mạng!', 'error');
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gửi đánh giá';
+        btn.disabled = false;
+    });
+}
+</script>
+<script>
+// Logic bật/tắt form trả lời
+function toggleReplyForm(reviewId) {
+    const form = document.getElementById('reply-form-' + reviewId);
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// Logic gửi trả lời bằng AJAX
+function submitStaffReply(reviewId) {
+    const replyText = document.getElementById('reply-text-' + reviewId).value.trim();
+    if (!replyText) {
+        showToast('Vui lòng nhập nội dung trả lời!', 'error');
+        return;
+    }
+
+    fetch('ajax_reply_review.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_id: reviewId, staff_reply: replyText })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000); // F5 lại để hiện khung xanh
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(err => showToast('Lỗi kết nối!', 'error'));
+}
+</script>
 <?php require_once 'includes/footer.php'; ?>

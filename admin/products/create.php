@@ -45,6 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     .img-box img { width: 100%; height: 100%; object-fit: cover; }
     .remove-btn { position: absolute; top: 2px; right: 2px; background: red; color: white; border: none; cursor: pointer; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; line-height: 1; padding: 0; }
     .loading { position: absolute; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+    
+    /* CSS giúp khung soạn thảo cao và thoáng hơn */
+    .ck-editor__editable_inline {
+        min-height: 300px;
+    }
 </style>
 
 <div style="margin: 20px;">
@@ -105,14 +110,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <div class="form-group" style="margin-bottom: 15px;">
             <label style="font-weight: bold;">Mô tả:</label>
-            <textarea name="description" class="form-control" rows="4" style="width: 100%; padding: 8px;"></textarea>
+            <!-- Bắt buộc phải có id="product_desc" -->
+            <textarea name="description" id="product_desc" class="form-control" rows="4" style="width: 100%; padding: 8px;"></textarea>
         </div>
         
         <button type="submit" class="btn btn-add" style="padding: 10px 20px;">Lưu sản phẩm</button>
     </form>
 </div>
 
+<!-- Đưa link CDN của CKEditor lên TRƯỚC đoạn script kích hoạt -->
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+
 <script>
+    // 1. Kích hoạt CKEditor cho ô textarea
+    ClassicEditor
+        .create(document.querySelector('#product_desc'))
+        .catch(error => {
+            console.error(error);
+        });
+
+    // 2. Code xử lý ảnh của bác
     const fileInput = document.getElementById('fileInput');
     const previewArea = document.getElementById('image-preview');
     const hiddenInputsArea = document.getElementById('hidden-inputs');
@@ -132,7 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         formData.append('image', compressedBlob, file.name);
 
         try {
-            // Nhớ đảm bảo file ajax_upload.php ở đúng đường dẫn này
             const res = await fetch('../../utils/ajax_upload.php', { method: 'POST', body: formData });
             const data = await res.json();
 
