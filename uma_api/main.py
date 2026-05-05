@@ -33,7 +33,12 @@ def get_db_connection():
 class CategoryCreate(BaseModel):
     name: str
     slug: str
-
+class ReviewCreate(BaseModel):
+    user_id: int
+    rating: int
+    comment: str
+class ReviewReply(BaseModel):
+    staff_reply: str
 # 1. API: Lấy danh sách danh mục (Read)
 @app.get("/api/categories")
 def get_categories():
@@ -1099,5 +1104,55 @@ def get_user_favorites(user_id: int):
                 item['main_image'] = 'https://via.placeholder.com/200x220?text=No+Image'
                 
         return {"status": "success", "data": favorites}
+    finally:
+        conn.close()
+# 52. Lấy danh sách đánh giá của sản phẩm
+@app.get("/api/products/{product_id}/reviews")
+def get_product_reviews(product_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # Lấy bình luận kèm theo tên và avatar của người dùng
+        sql = """
+            SELECT r.*, u.full_name, u.username, u.avatar_url
+            FROM reviews r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.product_id = %s
+            ORDER BY r.created_at DESC
+        """
+        cursor.execute(sql, (product_id,))
+        reviews = cursor.fetchall()
+        return {"status": "success", "data": reviews}
+    finally:
+        conn.close()
+
+# 53. Thêm đánh giá mới
+@app.post("/api/products/{product_id}/reviews")
+def create_product_review(product_id: int, review: ReviewCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "INSERT INTO reviews (user_id, product_id, rating, comment) VALUES (%s, %s, %s, %s)"
+        cursor.execute(sql, (review.user_id, product_id, review.rating, review.comment))
+        conn.commit()
+        return {"status": "success", "message": "Cảm ơn bác đã đánh giá sản phẩm!"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# 54. API: Staff/Admin trả lời đánh giá
+@app.put("/api/reviews/{review_id}/reply")
+def reply_product_review(review_id: int, reply: ReviewReply):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        sql = "UPDATE reviews SET staff_reply = %s WHERE id = %s"
+        cursor.execute(sql, (reply.staff_reply, review_id))
+        conn.commit()
+        return {"status": "success", "message": "Đã gửi câu trả lời!"}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
     finally:
         conn.close()
