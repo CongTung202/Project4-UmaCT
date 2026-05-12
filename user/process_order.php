@@ -31,7 +31,8 @@ $order_data = [
     'total_price' => $data['total_price'],
     'shipping_address' => $data['address'],
     'payment_method' => (int)$data['payment_method'],
-    'items' => $data['items']
+    'items' => $data['items'],
+    'voucher_id' => $data['voucher_id'] ?? null
 ];
 
 $ch_order = curl_init(API_URL . '/orders');

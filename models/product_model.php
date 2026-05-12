@@ -117,4 +117,5 @@ function searchProducts($keyword) {
     $result = json_decode($response, true);
     return $result['data'] ?? [];
 }
+
 ?>

@@ -45,7 +45,7 @@ foreach ($selected_ids as $id) {
     .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
 </style>
 
-<div class="main-content expanded-mode">
+<div class=" expanded-mode">
     <h2 style="margin-bottom: 30px;">Xác nhận đặt hàng</h2>
     
     <div class="cart-container">
@@ -84,7 +84,7 @@ foreach ($selected_ids as $id) {
                     <div style="display: flex; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f9f9f9;">
                         <img src="<?= $item['main_image'] ?>" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                         <div style="flex: 1;">
-                            <div style="font-size: 13px; font-weight: 600;"><?= $item['name'] ?></div>
+                            <div style="font-size: 13px; font-weight: 600;"><?= htmlspecialchars($item['name']) ?></div>
                             <div style="font-size: 12px; color: #888;">x<?= $item['quantity'] ?></div>
                         </div>
                         <div style="font-weight: bold; color: #ff3333;"><?= number_format($item['price'] * $item['quantity'], 0, ',', '.') ?>đ</div>
@@ -92,9 +92,20 @@ foreach ($selected_ids as $id) {
                 <?php endforeach; ?>
             </div>
 
+            <div style="margin: 20px 0; border-top: 1px dashed #eee; padding-top: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px;">
+                    <i class="fas fa-ticket-alt" style="color: #ff3333;"></i> Nhập mã giảm giá:
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="voucher_code" placeholder="VD: UMA100K" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; text-transform: uppercase;">
+                    <button type="button" id="btnApplyVoucher" style="background: #333; color: #fff; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Áp dụng</button>
+                </div>
+                <div id="voucher_msg" style="font-size: 12px; margin-top: 8px; min-height: 18px;"></div>
+            </div>
+
             <div class="summary-row" style="border-top: 2px dashed #eee; padding-top: 20px;">
                 <span style="font-weight: bold;">Tổng tiền thanh toán:</span>
-                <span class="total-price"><?= number_format($total_bill, 0, ',', '.') ?>đ</span>
+                <span class="total-price" id="final_price_display"><?= number_format($total_bill, 0, ',', '.') ?>đ</span>
             </div>
 
             <button type="button" class="btn-checkout" id="btnPlaceOrder">ĐẶT HÀNG NGAY</button>
@@ -103,43 +114,113 @@ foreach ($selected_ids as $id) {
 </div>
 
 <script>
-document.getElementById('btnPlaceOrder').addEventListener('click', function() {
-    const data = {
-        user_id: <?= $user['id'] ?>,
-        full_name: document.getElementById('full_name').value,
-        phone: document.getElementById('phone').value,
-        address: document.getElementById('address').value,
-        total_price: <?= $total_bill ?>,
-        payment_method: document.querySelector('input[name=\"payment\"]:checked').value,
-        items: <?= json_encode($checkout_items) ?>
-    };
+// BIẾN TOÀN CỤC CHO VOUCHER
+let appliedVoucherId = null;
+let finalDiscount = 0;
+const baseTotal = <?= $total_bill ?>;
 
-    if(!data.full_name || !data.address || !data.phone) {
-        showToast('Vui lòng điền đầy đủ thông tin giao hàng!', 'error');
-        return;
-    }
+// 1. XỬ LÝ NÚT ÁP DỤNG VOUCHER
+document.getElementById('btnApplyVoucher').addEventListener('click', function() {
+    const code = document.getElementById('voucher_code').value.trim();
+    if(!code) return showToast('Bác chưa nhập mã kìa!', 'error');
 
-    this.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Đang xử lý...';
+    this.innerText = '...';
     this.disabled = true;
 
-    // Gọi AJAX xử lý đặt hàng
-    fetch('process_order.php', {
+    fetch('ajax_apply_voucher.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ code: code, cart_total: baseTotal })
     })
     .then(res => res.json())
-    .then(res => {
-        if(res.status === 'success') {
-            showToast('Đặt hàng thành công! Đang chuyển hướng...', 'success');
-            setTimeout(() => { window.location.href = 'order_success.php?id=' + res.order_id; }, 2000);
+    .then(data => {
+        document.getElementById('btnApplyVoucher').innerText = 'Áp dụng';
+        document.getElementById('btnApplyVoucher').disabled = false;
+        
+        const msgBox = document.getElementById('voucher_msg');
+        
+        if (data.status === 'success') {
+            appliedVoucherId = data.data.voucher_id;
+            finalDiscount = data.data.discount_amount;
+            
+            // Hiện thông báo xanh và đổi tổng tiền
+            msgBox.innerHTML = `<span style="color: #27ae60; font-weight: bold;"><i class="fas fa-check-circle"></i> Giảm ${new Intl.NumberFormat('vi-VN').format(finalDiscount)}đ thành công!</span>`;
+            
+            let newTotal = baseTotal - finalDiscount;
+            if (newTotal < 0) newTotal = 0;
+            document.getElementById('final_price_display').innerText = new Intl.NumberFormat('vi-VN').format(newTotal) + 'đ';
+            document.getElementById('voucher_code').disabled = true; // Khóa ô nhập liệu
         } else {
-            showToast(res.message, 'error');
-            this.disabled = false;
-            this.innerText = 'ĐẶT HÀNG NGAY';
+            appliedVoucherId = null;
+            finalDiscount = 0;
+            msgBox.innerHTML = `<span style="color: #ff3333;"><i class="fas fa-exclamation-circle"></i> ${data.message}</span>`;
+            document.getElementById('final_price_display').innerText = new Intl.NumberFormat('vi-VN').format(baseTotal) + 'đ';
         }
+    })
+    .catch(err => {
+        document.getElementById('btnApplyVoucher').innerText = 'Áp dụng';
+        document.getElementById('btnApplyVoucher').disabled = false;
+        showToast('Lỗi mạng khi kiểm tra mã!', 'error');
     });
 });
+
+// 2. XỬ LÝ NÚT ĐẶT HÀNG (ĐÃ FIX LỖI)
+const btnPlaceOrder = document.getElementById('btnPlaceOrder');
+
+if (btnPlaceOrder) {
+    btnPlaceOrder.addEventListener('click', function() {
+        let currentTotal = baseTotal - finalDiscount;
+        if (currentTotal < 0) currentTotal = 0;
+
+        // Lấy phương thức thanh toán an toàn
+        const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
+        const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 1;
+
+        const data = {
+            user_id: <?= $user['id'] ?>,
+            full_name: document.getElementById('full_name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            address: document.getElementById('address').value.trim(),
+            total_price: currentTotal, 
+            payment_method: paymentMethod,
+            items: <?= json_encode($checkout_items) ?>,
+            voucher_id: appliedVoucherId
+        };
+
+        if(!data.full_name || !data.address || !data.phone) {
+            showToast('Vui lòng điền đầy đủ thông tin giao hàng!', 'error');
+            return;
+        }
+
+        // Đổi trạng thái nút bấm
+        btnPlaceOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        btnPlaceOrder.disabled = true;
+
+        fetch('process_order.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                showToast('Đặt hàng thành công!', 'success');
+                setTimeout(() => { window.location.href = 'order_success.php?id=' + res.order_id; }, 1500);
+            } else {
+                showToast(res.message, 'error');
+                // Sửa lỗi "Cannot set properties of null" ở đây
+                btnPlaceOrder.disabled = false;
+                btnPlaceOrder.innerText = 'ĐẶT HÀNG NGAY';
+            }
+        })
+        .catch(err => {
+            console.error("Lỗi mạng:", err);
+            showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+            btnPlaceOrder.disabled = false;
+            btnPlaceOrder.innerText = 'ĐẶT HÀNG NGAY';
+        });
+    });
+}
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

@@ -28,7 +28,20 @@ def get_db_connection():
         database='umact_db',
         cursorclass=pymysql.cursors.DictCursor # Trả về dạng Dictionary (JSON)
     )
+# Cập nhật model tạo đơn hàng (Thêm voucher_id)
+class OrderCreate(BaseModel):
+    user_id: int
+    total_price: float
+    shipping_address: str
+    payment_method: int
+    items: list
+    voucher_id: Optional[int] = None # Cho phép rỗng nếu không dùng mã
 
+# Model kiểm tra mã
+class VoucherValidate(BaseModel):
+    code: str
+    user_id: int
+    cart_total: float
 # Model mô tả dữ liệu đầu vào khi thêm Danh mục
 class CategoryCreate(BaseModel):
     name: str
@@ -1015,13 +1028,6 @@ class UserProfileUpdate(BaseModel):
     address: str
     phone: str
 
-# Model cho việc tạo đơn hàng
-class OrderCreate(BaseModel):
-    user_id: int
-    total_price: float
-    shipping_address: str
-    payment_method: int # 1: COD, 2: Chuyển khoản...
-    items: list # Danh sách các sản phẩm {product_id, quantity, price}
 
 # 48. API: Cập nhật nhanh Profile từ trang Checkout
 @app.put("/api/users/{user_id}/profile-lite")
@@ -1037,33 +1043,42 @@ def update_profile_lite(user_id: int, profile: UserProfileUpdate):
     finally:
         conn.close()
 
-# 49. API: Tạo đơn hàng mới
+# 49. API: Tạo đơn hàng (Đã cập nhật để hỗ trợ Voucher và chống lỗi KeyError)
 @app.post("/api/orders")
 def create_order(order: OrderCreate):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         # 1. Chèn vào bảng orders
-        sql_order = "INSERT INTO orders (user_id, total_price, shipping_address, payment_method, status) VALUES (%s, %s, %s, %s, 'PENDING')"
-        cursor.execute(sql_order, (order.user_id, order.total_price, order.shipping_address, order.payment_method))
+        sql_order = "INSERT INTO orders (user_id, voucher_id, total_price, shipping_address, payment_method, status) VALUES (%s, %s, %s, %s, %s, 'PENDING')"
+        cursor.execute(sql_order, (order.user_id, order.voucher_id, order.total_price, order.shipping_address, order.payment_method))
         order_id = cursor.lastrowid
         
-        # 2. Chèn vào bảng order_items
-        sql_items = "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (%s, %s, %s, %s)"
-        for item in order.items:
-            # SỬA LỖI Ở ĐÂY: Thay item['product_id'] thành item['id']
-            cursor.execute(sql_items, (order_id, item['id'], item['quantity'], item['price']))
+        # 2. Xử lý Voucher (Trừ lượt dùng nếu có áp mã)
+        if order.voucher_id:
+            sql_usage = "INSERT INTO user_voucher_usage (user_id, voucher_id, order_id) VALUES (%s, %s, %s)"
+            cursor.execute(sql_usage, (order.user_id, order.voucher_id, order_id))
             
-        # 3. Xóa các sản phẩm này khỏi giỏ hàng sau khi đặt thành công
+            sql_deduct = "UPDATE vouchers SET usage_limit = usage_limit - 1 WHERE id = %s"
+            cursor.execute(sql_deduct, (order.voucher_id,))
+
+        # 3. Chèn vào bảng order_items (Dùng .get() để chống lỗi KeyError)
+        sql_items = "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (%s, %s, %s, %s)"
         sql_clear_cart = "DELETE FROM cart WHERE user_id = %s AND product_id = %s"
+        
         for item in order.items:
-            # SỬA LỖI Ở ĐÂY: Thay item['product_id'] thành item['id']
-            cursor.execute(sql_clear_cart, (order.user_id, item['id']))
+            # Lấy linh hoạt tên cột từ PHP gửi sang
+            p_id = item.get('product_id', item.get('id'))
+            p_price = item.get('price_at_purchase', item.get('price'))
+            
+            cursor.execute(sql_items, (order_id, p_id, item['quantity'], p_price))
+            cursor.execute(sql_clear_cart, (order.user_id, p_id))
             
         conn.commit()
         return {"status": "success", "order_id": order_id}
     except Exception as e:
         conn.rollback()
+        print("LỖI TẠO ĐƠN HÀNG:", str(e)) # In thẳng lỗi ra màn hình Terminal để bắt mạch
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
@@ -1227,5 +1242,66 @@ def get_user_voucher_history(user_id: int):
         """
         cursor.execute(sql, (user_id,))
         return {"status": "success", "data": cursor.fetchall()}
+    finally:
+        conn.close()
+# 59. API: Lấy các voucher mà User chưa nhận (Để đi săn)
+@app.get("/api/users/{user_id}/claimable-vouchers")
+def get_claimable_vouchers(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # Lấy voucher còn hạn, còn lượt dùng và User này CHƯA từng nhận
+        sql = """
+            SELECT * FROM vouchers 
+            WHERE expiration_date > NOW() AND usage_limit > 0
+            AND id NOT IN (SELECT voucher_id FROM user_vouchers WHERE user_id = %s)
+        """
+        cursor.execute(sql, (user_id,))
+        return {"status": "success", "data": cursor.fetchall()}
+    finally:
+        conn.close()
+
+# 60. API: Thực hiện nhận Voucher
+@app.post("/api/users/{user_id}/vouchers/{voucher_id}/claim")
+def claim_voucher(user_id: int, voucher_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # 1. Thêm vào ví
+        cursor.execute("INSERT INTO user_vouchers (user_id, voucher_id) VALUES (%s, %s)", (user_id, voucher_id))
+        # 2. Giảm số lượng usage_limit của hệ thống
+        cursor.execute("UPDATE vouchers SET usage_limit = usage_limit - 1 WHERE id = %s", (voucher_id,))
+        conn.commit()
+        return {"status": "success", "message": "Đã thêm voucher vào ví của bác!"}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": "Bác đã nhận mã này rồi!"}
+    finally:
+        conn.close()
+# 61. API: Kiểm tra mã giảm giá trực tiếp tại Checkout
+@app.post("/api/vouchers/validate")
+def validate_voucher(data: VoucherValidate):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # 1. Kiểm tra tồn tại, hạn dùng và số lượng
+        sql = "SELECT * FROM vouchers WHERE code = %s AND expiration_date > NOW() AND usage_limit > 0"
+        cursor.execute(sql, (data.code,))
+        voucher = cursor.fetchone()
+
+        if not voucher:
+            return {"status": "error", "message": "Mã không hợp lệ hoặc đã hết hạn/lượt dùng!"}
+
+        # 2. Kiểm tra giá trị đơn hàng tối thiểu
+        if data.cart_total < voucher['min_order_value']:
+            return {"status": "error", "message": f"Đơn hàng cần đạt tối thiểu {voucher['min_order_value']:,.0f}đ!"}
+
+        # 3. Kiểm tra xem User này đã từng xài mã này chưa (Chống dùng nhiều lần)
+        sql_used = "SELECT id FROM user_voucher_usage WHERE user_id = %s AND voucher_id = %s"
+        cursor.execute(sql_used, (data.user_id, voucher['id']))
+        if cursor.fetchone():
+            return {"status": "error", "message": "Bác đã sử dụng mã này cho một đơn hàng trước đó rồi!"}
+
+        return {"status": "success", "data": {"voucher_id": voucher['id'], "discount_amount": float(voucher['discount_amount'])}}
     finally:
         conn.close()
