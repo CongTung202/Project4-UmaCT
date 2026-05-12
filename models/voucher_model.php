@@ -81,4 +81,19 @@ function deleteVoucher($id) {
     $error = json_decode($response, true);
     throw new Exception($error['detail'] ?? 'Lỗi khi xóa mã giảm giá');
 }
+function getAvailableVouchers() {
+    $ch = curl_init(API_URL . '/vouchers/available');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($response, true)['data'] ?? [];
+}
+
+function getUserVoucherHistory($user_id) {
+    $ch = curl_init(API_URL . '/users/' . $user_id . '/vouchers-used');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($response, true)['data'] ?? [];
+}
 ?>

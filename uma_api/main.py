@@ -1200,3 +1200,32 @@ def get_article_detail(article_id: int):
         return {"status": "success", "data": article}
     finally:
         conn.close()
+# 57. API: Lấy danh sách voucher còn hiệu lực
+@app.get("/api/vouchers/available")
+def get_available_vouchers():
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # Lấy voucher chưa hết hạn và còn lượt dùng
+        sql = "SELECT * FROM vouchers WHERE expiration_date > NOW() AND usage_limit > 0"
+        cursor.execute(sql)
+        return {"status": "success", "data": cursor.fetchall()}
+    finally:
+        conn.close()
+
+# 58. API: Lấy lịch sử sử dụng voucher của 1 user
+@app.get("/api/users/{user_id}/vouchers-used")
+def get_user_voucher_history(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        sql = """
+            SELECT v.*, uvu.used_at, uvu.order_id 
+            FROM user_voucher_usage uvu
+            JOIN vouchers v ON uvu.voucher_id = v.id
+            WHERE uvu.user_id = %s
+        """
+        cursor.execute(sql, (user_id,))
+        return {"status": "success", "data": cursor.fetchall()}
+    finally:
+        conn.close()
