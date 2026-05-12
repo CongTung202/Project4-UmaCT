@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/config.php';
 // Gọi API lấy danh sách mã giảm giá
 function getAllVouchers() {
     $ch = curl_init(API_URL . '/vouchers');

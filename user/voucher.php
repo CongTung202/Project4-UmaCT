@@ -3,7 +3,7 @@ require_once 'includes/header.php';
 require_once '../models/voucher_model.php';
 
 if (!isset($_SESSION['user'])) {
-    header('Location: login.php');
+    echo "<script>window.location.href='login.php';</script>";
     exit;
 }
 
@@ -83,7 +83,7 @@ $used_vouchers = getUserVoucherHistory($user_id);
 
     <div id="tab-history" class="voucher-content" style="display: none;">
         <?php if (empty($used_vouchers)): ?>
-            <p style="text-align: center; color: #888; padding: 50px;">Bác chưa sử dụng mã giảm giá nào.</p>
+            <p style="text-align: center; color: #888; padding: 50px;">Hiện chưa sử dụng mã giảm giá nào.</p>
         <?php else: ?>
             <div class="voucher-grid">
                 <?php foreach ($used_vouchers as $v): ?>

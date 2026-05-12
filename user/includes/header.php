@@ -113,7 +113,7 @@ $current_url = $_SERVER['REQUEST_URI'];
     </div>
 
     <div class="header-right">
-        <a href="#" class="header-icon" title="Voucher">
+        <a href="voucher.php" class="header-icon" title="Voucher">
             <i class="fas fa-ticket-alt"></i>
         </a>
         
