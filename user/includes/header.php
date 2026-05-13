@@ -98,7 +98,7 @@ $current_url = $_SERVER['REQUEST_URI'];
 <header class="main-header">
     <div class="header-left">
         <a href="<?= BASE_URL ?>/user/index.php" style="text-decoration: none;">
-            <img src="<?= BASE_URL ?>/assets/images/logo.png" alt="UmaCT Logo" class="logo-img" style="height: 25px;" onerror="this.onerror=null; this.src='https://via.placeholder.com/100x25?text=UmaCT'">
+            <img src="<?= BASE_URL ?>/assets/images/logo.png" alt="UmaCT Logo" class="logo-img" style="height: 25px;" onerror="this.onerror=null; this.src='https://placehold.co/100x25?text=UmaCT'">
         </a>
     </div>
     
@@ -162,7 +162,7 @@ $current_url = $_SERVER['REQUEST_URI'];
                         if (res.status === 'success' && res.data.length > 0) {
                             let html = '';
                             res.data.forEach(p => {
-                                const img = p.main_image ? p.main_image : 'https://via.placeholder.com/40';
+                                const img = p.main_image ? p.main_image : 'https://placehold.co/40';
                                 // Định dạng tiền tệ
                                 const price = new Intl.NumberFormat('vi-VN').format(p.price) + ' đ';
                                 

@@ -446,7 +446,7 @@ def get_order_detail(order_id: int):
         # 3. Kiểm tra nếu sản phẩm nào không có ảnh thì gán ảnh mặc định
         for item in items:
             if not item['image_url']:
-                item['image_url'] = 'https://via.placeholder.com/50'
+                item['image_url'] = 'https://placehold.co/50'
                 
         return {"status": "success", "data": {"order_info": order_info, "items": items}}
     finally:
@@ -1116,7 +1116,7 @@ def get_user_favorites(user_id: int):
         # Gán ảnh mặc định nếu sản phẩm chưa có ảnh
         for item in favorites:
             if not item['main_image']:
-                item['main_image'] = 'https://via.placeholder.com/200x220?text=No+Image'
+                item['main_image'] = 'https://placehold.co/200x220?text=No+Image'
                 
         return {"status": "success", "data": favorites}
     finally:

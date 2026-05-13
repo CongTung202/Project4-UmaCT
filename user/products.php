@@ -146,7 +146,7 @@ function buildFilterUrl($updates = []) {
             <?php foreach($paginated_products as $p): ?>
             <div class="product-item">
                 <a href="detail.php?id=<?= $p['id'] ?>" class="img-wrapper">
-                    <img src="<?= $p['main_image'] ?? 'https://via.placeholder.com/240x240?text=No+Image' ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <img src="<?= $p['main_image'] ?? 'https://placehold.co/240x240?text=No+Image' ?>" alt="<?= htmlspecialchars($p['name']) ?>">
                 </a>
                 <div class="info">
                     <a href="detail.php?id=<?= $p['id'] ?>" style="text-decoration: none;">

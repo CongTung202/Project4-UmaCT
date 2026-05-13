@@ -20,7 +20,41 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'deleted') {
     $success = "Đã xóa đơn hàng thành công!";
 }
 
-$orders = getAllOrders();
+// 1. LẤY DỮ LIỆU BAN ĐẦU
+$all_orders = getAllOrders();
+
+// 2. NHẬN THAM SỐ TÌM KIẾM TỪ URL (GET)
+$keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+$status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : '';
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$limit = 10; // Số đơn hàng hiển thị trên 1 trang
+
+// 3. XỬ LÝ LỌC ĐƠN HÀNG (FILTER)
+$filtered_orders = [];
+foreach ($all_orders as $o) {
+    // Tìm kiếm theo ID đơn hàng HOẶC Tên khách hàng
+    $customer_name = $o['full_name'] ?? $o['username'];
+    $match_keyword = empty($keyword) || 
+                     strpos((string)$o['id'], $keyword) !== false || 
+                     mb_stripos($customer_name, $keyword, 0, 'UTF-8') !== false;
+    
+    // Lọc theo trạng thái
+    $match_status = empty($status_filter) || $o['status'] == $status_filter;
+    
+    if ($match_keyword && $match_status) {
+        $filtered_orders[] = $o;
+    }
+}
+
+// 4. XỬ LÝ PHÂN TRANG (PAGINATION)
+$total_items = count($filtered_orders);
+$total_pages = ceil($total_items / $limit);
+if ($total_pages > 0 && $page > $total_pages) $page = $total_pages; // Tránh trang vượt quá giới hạn
+$offset = ($page - 1) * $limit;
+
+// Cắt mảng để lấy đúng số đơn hàng của trang hiện tại
+$orders = array_slice($filtered_orders, $offset, $limit);
 ?>
 
 <style>
@@ -39,17 +73,47 @@ $orders = getAllOrders();
     
     /* CSS cho dropdown trạng thái */
     .select-status { padding: 5px; border-radius: 4px; border: 1px solid #ccc; outline: none; cursor: pointer;}
+
+    /* CSS Phân trang & Lọc */
+    .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 25px; }
+    .page-link { 
+        padding: 8px 15px; background: #fff; border: 1px solid #ddd; 
+        color: #333; text-decoration: none; border-radius: 4px; font-weight: bold; transition: 0.3s;
+    }
+    .page-link:hover { background: #f4f6f9; border-color: #ff3333; color: #ff3333; }
+    .page-link.active { background: #ff3333; color: #fff; border-color: #ff3333; }
+    
+    .filter-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .filter-form { display: flex; gap: 10px; align-items: center; width: 100%; }
 </style>
 
-<div style="margin: 20px;">
+<div class="main-content">
     <h2>Quản lý Đơn hàng</h2>
 
     <?php if ($success): ?>
-        <div style="color: #155724; background-color: #d4edda; padding: 10px; margin-bottom: 15px; border-radius: 4px;"><?= $success ?></div>
+        <div style="color: #155724; background-color: #d4edda; padding: 10px; margin-bottom: 15px; border-radius: 4px; border-left: 4px solid #28a745;"><?= $success ?></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div style="color: #721c24; background-color: #f8d7da; padding: 10px; margin-bottom: 15px; border-radius: 4px;"><?= $error ?></div>
+        <div style="color: #721c24; background-color: #f8d7da; padding: 10px; margin-bottom: 15px; border-radius: 4px; border-left: 4px solid #dc3545;"><?= $error ?></div>
     <?php endif; ?>
+
+    <div class="filter-bar">
+        <form method="GET" class="filter-form">
+            <input type="text" name="keyword" class="form-control" placeholder="Mã ĐH hoặc Tên khách hàng..." value="<?= htmlspecialchars($keyword) ?>" style="width: 250px; padding: 8px;">
+            
+            <select name="status_filter" class="form-control" style="width: 200px; padding: 8px;">
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="PENDING" <?= $status_filter == 'PENDING' ? 'selected' : '' ?>>Chờ xử lý</option>
+                <option value="PAID" <?= $status_filter == 'PAID' ? 'selected' : '' ?>>Đã thanh toán</option>
+                <option value="SHIPPING" <?= $status_filter == 'SHIPPING' ? 'selected' : '' ?>>Đang giao</option>
+                <option value="COMPLETED" <?= $status_filter == 'COMPLETED' ? 'selected' : '' ?>>Hoàn thành</option>
+                <option value="CANCELLED" <?= $status_filter == 'CANCELLED' ? 'selected' : '' ?>>Đã hủy</option>
+            </select>
+            
+            <button type="submit" class="btn btn-edit" style="margin: 0;"><i class="fas fa-search"></i> Lọc đơn hàng</button>
+            <a href="index.php" class="btn" style="background: #6c757d; margin: 0;"><i class="fas fa-sync-alt"></i> Hủy</a>
+        </form>
+    </div>
 
     <table>
         <thead>
@@ -64,13 +128,13 @@ $orders = getAllOrders();
         </thead>
         <tbody>
             <?php if(empty($orders)): ?>
-                <tr><td colspan="6" style="text-align:center;">Chưa có đơn hàng nào.</td></tr>
+                <tr><td colspan="6" style="text-align:center; padding: 30px; color: #888;">Không tìm thấy đơn hàng nào phù hợp!</td></tr>
             <?php else: ?>
                 <?php foreach ($orders as $o): ?>
                 <tr>
-                    <td><strong>#<?= $o['id'] ?></strong></td>
+                    <td><strong style="color: #ff3333;">#<?= $o['id'] ?></strong></td>
                     <td><?= htmlspecialchars($o['full_name'] ?? $o['username']) ?></td>
-                    <td style="color: red; font-weight: bold;"><?= number_format($o['total_price'], 0, ',', '.') ?> đ</td>
+                    <td style="color: #333; font-weight: bold;"><?= number_format($o['total_price'], 0, ',', '.') ?> đ</td>
                     <td><?= date('d/m/Y H:i', strtotime($o['created_at'])) ?></td>
                     
                     <td>
@@ -90,25 +154,48 @@ $orders = getAllOrders();
                     </td>
                     
                     <td>
-                        <a href="detail.php?id=<?= $o['id'] ?>" class="btn btn-edit" style="background-color: #17a2b8;">Chi tiết</a>
-                        <button class="btn btn-delete" onclick="openDeleteModal(<?= $o['id'] ?>)" style="cursor: pointer; border: none;">Xóa</button>
+                        <a href="detail.php?id=<?= $o['id'] ?>" class="btn btn-edit" style="background-color: #17a2b8;" title="Xem chi tiết"><i class="fas fa-eye"></i> Chi tiết</a>
+                        <button class="btn btn-delete" onclick="openDeleteModal(<?= $o['id'] ?>)" style="cursor: pointer; border: none;" title="Xóa"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>
+
+    <?php if($total_pages > 1): ?>
+        <div class="pagination">
+            <?php if ($page > 1): ?>
+                <a href="?page=<?= $page - 1 ?>&keyword=<?= urlencode($keyword) ?>&status_filter=<?= urlencode($status_filter) ?>" class="page-link">&laquo;</a>
+            <?php endif; ?>
+
+            <?php for($i = 1; $i <= $total_pages; $i++): ?>
+                <a href="?page=<?= $i ?>&keyword=<?= urlencode($keyword) ?>&status_filter=<?= urlencode($status_filter) ?>" 
+                   class="page-link <?= $i == $page ? 'active' : '' ?>">
+                   <?= $i ?>
+                </a>
+            <?php endfor; ?>
+
+            <?php if ($page < $total_pages): ?>
+                <a href="?page=<?= $page + 1 ?>&keyword=<?= urlencode($keyword) ?>&status_filter=<?= urlencode($status_filter) ?>" class="page-link">&raquo;</a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+    
+    <div style="text-align: center; margin-top: 15px; color: #888; font-size: 13px;">
+        Hiển thị trang <?= $page ?> / <?= $total_pages > 0 ? $total_pages : 1 ?> (Tổng cộng <?= $total_items ?> đơn hàng)
+    </div>
 </div>
 
 <div id="statusModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeStatusModal()">&times;</span>
-        <h3 style="margin-top: 0; color: #007bff;">Xác nhận đổi trạng thái</h3>
-        <p>Bạn có chắc chắn muốn đổi trạng thái đơn hàng <strong id="statusModalOrderId" style="font-size: 18px;"></strong> thành <strong id="statusModalNewStatus" style="color: red;"></strong>?</p>
+        <h3 style="margin-top: 0; color: #007bff;"><i class="fas fa-exchange-alt"></i> Xác nhận đổi trạng thái</h3>
+        <p>Bạn có chắc chắn muốn đổi trạng thái đơn hàng <strong id="statusModalOrderId" style="font-size: 18px;"></strong> thành <strong id="statusModalNewStatus" style="color: #ff3333;"></strong>?</p>
         
         <div style="text-align: right; margin-top: 20px;">
             <button type="button" class="btn" style="background-color: #6c757d; cursor: pointer; border: none; padding: 8px 15px;" onclick="closeStatusModal()">Hủy bỏ</button>
-            <button type="button" class="btn btn-add" style="cursor: pointer; border: none; padding: 8px 15px;" onclick="confirmSubmitStatus()">Đồng ý</button>
+            <button type="button" class="btn btn-add" style="cursor: pointer; border: none; padding: 8px 15px; margin-bottom: 0;" onclick="confirmSubmitStatus()">Đồng ý</button>
         </div>
     </div>
 </div>
@@ -116,7 +203,7 @@ $orders = getAllOrders();
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeDeleteModal()">&times;</span>
-        <h3 style="margin-top: 0; color: #d9534f;">Cảnh báo xóa!</h3>
+        <h3 style="margin-top: 0; color: #d9534f;"><i class="fas fa-exclamation-triangle"></i> Cảnh báo xóa!</h3>
         <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng <strong id="modalOrderId" style="font-size: 18px;"></strong> không?</p>
         <p style="color: #666; font-size: 14px;">Hành động này sẽ xóa toàn bộ chi tiết sản phẩm bên trong đơn hàng và không thể khôi phục.</p>
         

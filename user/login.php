@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </a>
 
     <div class="auth-wrapper">
-        <img src="<?= BASE_URL ?>/assets/images/logo.png" alt="UmaCT Logo" class="auth-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x50?text=UmaCT'">
+        <img src="<?= BASE_URL ?>/assets/images/logo.png" alt="UmaCT Logo" class="auth-logo" onerror="this.onerror=null; this.src='https://placehold.co/200x50?text=UmaCT'">
         
         <?php if($error): ?>
             <div style="color: #e74c3c; background: #fceae9; padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-size: 14px; font-weight: 500;">

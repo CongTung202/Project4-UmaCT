@@ -18,7 +18,7 @@ if (!$product) {
 }
 
 $images = !empty($product['images']) ? json_decode($product['images'], true) : [];
-$main_image = !empty($images) ? $images[0] : 'https://via.placeholder.com/600x600?text=No+Image';
+$main_image = !empty($images) ? $images[0] : 'https://placehold.co/600x600?text=No+Image';
 
 $categories = getAllCategories();
 $suppliers = getAllSuppliers();
@@ -181,7 +181,7 @@ $reviews = json_decode($res_reviews, true)['data'] ?? [];
                 <div class="related-item">
                     <?php 
                         // Kiểm tra ảnh sản phẩm liên quan
-                        $rp_img = !empty($rp['main_image']) ? $rp['main_image'] : 'https://via.placeholder.com/200x220?text=No+Image'; 
+                        $rp_img = !empty($rp['main_image']) ? $rp['main_image'] : 'https://placehold.co/200x220?text=No+Image'; 
                     ?>
                     <img src="<?= htmlspecialchars($rp_img) ?>" alt="<?= htmlspecialchars($rp['name']) ?>">
                     <div class="r-name"><?= htmlspecialchars($rp['name']) ?></div>

@@ -31,6 +31,6 @@ $recent_articles = array_slice($articles, 0, 2);
     <?php endif; ?>
 
     <div class="character-image" style="margin-top: 20px;">
-        <img src="<?= BASE_URL ?>/assets/images/guide-character.png" alt="Guide Character" onerror="this.src='https://via.placeholder.com/300x400?text=Nhân+vật+UmaCT'">
+        <img src="<?= BASE_URL ?>/assets/images/guide-character.png" alt="Guide Character" onerror="this.src='https://placehold.co/300x400?text=UmaCT'">
     </div>
 </aside>
