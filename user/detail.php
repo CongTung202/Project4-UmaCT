@@ -1,4 +1,18 @@
 <?php
+//LƯU COOKIE 
+if (isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    $viewed_items = isset($_COOKIE['recently_viewed']) ? json_decode($_COOKIE['recently_viewed'], true) : [];
+    
+    if (($key = array_search($id, $viewed_items)) !== false) {
+        unset($viewed_items[$key]);
+    }
+    array_unshift($viewed_items, $id);
+    $viewed_items = array_slice($viewed_items, 0, 5); // Lưu 5 sản phẩm
+    setcookie('recently_viewed', json_encode($viewed_items), time() + (86400 * 30), "/");
+}
+// 
+
 require_once 'includes/header.php';
 require_once '../models/product_model.php';
 require_once '../models/category_model.php';

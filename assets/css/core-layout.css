@@ -119,79 +119,30 @@ header {
 .sidebar-item i { width: 16px; text-align: center; }
 
 
-/* --- 5. RIGHT SIDEBAR (CHARACTER GUIDE / TIN TỨC) --- */
+/* --- 5. RIGHT SIDEBAR (TIN TỨC & VỪA XEM) --- */
 .character-guide-container {
     position: fixed;
-    top: 80px; /* Thấp hơn header một chút */
+    top: 60px; /* Sửa lại bằng 60px cho bằng với Left Sidebar và mép dưới Header */
     right: 0;
     width: 300px;
+    height: calc(100vh - 60px); /* Giới hạn chiều cao bằng màn hình trừ đi header */
     background-color: #f5f5f5;
     z-index: 30;
     display: flex;
     flex-direction: column;
-    padding: 0 20px;
+    padding: 20px; /* Cách đều 4 góc */
+    overflow-y: auto; /* BẬT THANH CUỘN: Cực kỳ quan trọng để lướt tin tức */
+    border-left: 1px solid #e0e0e0; /* Thêm đường kẻ viền tách biệt với main-content */
 }
 
-.speech-bubble {
-    background-color: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    width: 100%;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    position: relative;
+/* Ẩn thanh cuộn xấu xí của trình duyệt trên Right Sidebar (Tùy chọn) */
+.character-guide-container::-webkit-scrollbar {
+    width: 5px;
 }
-
-.speech-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 10px 10px 0;
-    border-style: solid;
-    border-color: #fff transparent transparent transparent;
-    filter: drop-shadow(0 1px 0 #e5e7eb);
+.character-guide-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
 }
-
-.bubble-text {
-    font-size: 13px;
-    color: #374151;
-    margin: 0 0 10px 0;
-    line-height: 1.5;
-}
-
-.chat-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: #f3f4f6;
-    border-radius: 8px;
-    padding: 8px 12px;
-    text-decoration: none;
-    color: #4b5563;
-    font-size: 12px;
-    font-weight: 600;
-    transition: background-color 0.2s ease;
-}
-
-.chat-link:hover { background-color: #e5e7eb; color: #ff3333; }
-
-.character-image {
-    width: 100%;
-    height: auto;
-    overflow: hidden;
-    margin-top: 10px;
-}
-
-.character-image img {
-    width: 100%;
-    display: block;
-    transform: scaleX(-1) scale(1.5); /* Phóng to và lật ảnh như bản gốc */
-    transform-origin: top center;
-}
-
 /* Kéo giãn giao diện khi ẩn cột phải (Right Sidebar) */
         .main-content.expanded-mode {
             margin-right: 30px !important; /* Xóa khoảng trống 300px của cột phải */
