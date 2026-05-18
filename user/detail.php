@@ -152,29 +152,6 @@ $reviews = json_decode($res_reviews, true)['data'] ?? [];
         </div>
     </div>
 
-    <div class="pd-policies">
-        <div class="policy-card">
-            <div class="policy-header"><i class="fas fa-shield-alt"></i> Cam kết bán hàng</div>
-            <div class="policy-body">
-                <ul class="policy-list">
-                    <li><i class="fas fa-check"></i> Bảo Đảm Giá Tốt Nhất Trực Tuyến</li>
-                    <li><i class="fas fa-check"></i> Hàng chính hãng 100%, đền gấp 10 nếu phát hiện lỗi NSX</li>
-                    <li><i class="fas fa-check"></i> FREE SHIPPING toàn quốc đơn hàng trên 500K</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="policy-card">
-            <div class="policy-header" style="background: #27ae60;"><i class="fas fa-info-circle"></i> Lưu ý khi mua hàng</div>
-            <div class="policy-body">
-                <ul class="policy-list">
-                    <li><i class="fas fa-angle-right" style="color: #666;"></i> Khách đọc kỹ ngày phát hành (dự kiến) của sản phẩm.</li>
-                    <li><i class="fas fa-angle-right" style="color: #666;"></i> Hàng đặt trước giá có thể thay đổi, inbox fanpage để chốt giá cuối.</li>
-                    <li><i class="fas fa-angle-right" style="color: #666;"></i> Khi unbox vui lòng quay video để được hỗ trợ tốt nhất.</li>
-                </ul>
-            </div>
-        </div>
-    </div>
 </div>
 
 <div class="pd-description">
