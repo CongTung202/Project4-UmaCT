@@ -1,17 +1,37 @@
 <?php
-// 1. Gọi model và lấy bài viết
+// 1. Gọi model và lấy bài viết, sản phẩm
 require_once __DIR__ . '/../../models/article_model.php';
 require_once __DIR__ . '/../../models/product_model.php';
 $articles = getAllArticles();
 $recent_articles = array_slice($articles, 0, 3); // Cắt lấy 3 bài viết mới nhất
 
-// Hàm tự động lấy ảnh đầu tiên trong bài viết để làm thumbnail (Nếu chưa có hàm này)
+// Hàm tự động lấy ảnh đầu tiên trong bài viết để làm thumbnail
 if (!function_exists('getFirstImage')) {
     function getFirstImage($html) {
         if (preg_match('/<img.+src=[\'"]([^\'"]+)[\'"].*>/i', $html, $matches)) {
             return $matches[1];
         }
-        return 'https://placehold.co/100x100/eeeeee/666666?text=UmaCT+News';
+        return BASE_URL . '/assets/images/2.png';
+    }
+}
+
+if (!function_exists('getProductFirstImage')) {
+    function getProductFirstImage($product) {
+        // Trường hợp 1: Cột images chứa chuỗi JSON (Do API Python dùng json.dumps)
+        if (!empty($product['images']) && is_string($product['images'])) {
+            $img_array = json_decode($product['images'], true);
+            // Lúc này $img_array sẽ có dạng ["link1.jpg", "link2.jpg"]
+            if (is_array($img_array) && count($img_array) > 0) {
+                return $img_array[0]; 
+            }
+        }
+        
+        // Trường hợp 2: Có sẵn cột main_image từ câu lệnh SQL (Nếu dùng API get_products chung)
+        if (!empty($product['main_image'])) return $product['main_image'];
+        if (!empty($product['image_url'])) return $product['image_url'];
+        
+        // Mặc định nếu hoàn toàn trống
+        return 'https://placehold.co/100x100/eeeeee/666666?text=UmaCT';
     }
 }
 
@@ -21,7 +41,6 @@ $viewed_ids = isset($_COOKIE['recently_viewed']) ? json_decode($_COOKIE['recentl
 // Nếu đang ở trang chi tiết và có ID sản phẩm, chèn vào đầu danh sách hiển thị
 $current_product_id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if ($current_product_id) {
-    // Loại bỏ nếu đã tồn tại, sau đó thêm vào đầu
     if (($key = array_search($current_product_id, $viewed_ids)) !== false) {
         unset($viewed_ids[$key]);
     }
@@ -56,7 +75,7 @@ if (!empty($viewed_ids) && function_exists('getProductById')) {
         font-size: 16px;
         font-weight: bold;
         color: #333;
-        border-bottom: 2px solid #ff3333; /* Vạch gạch chân đỏ */
+        border-bottom: 2px solid #ff3333;
         padding-bottom: 10px;
         margin-top: 0;
         margin-bottom: 15px;
@@ -105,14 +124,13 @@ if (!empty($viewed_ids) && function_exists('getProductById')) {
         line-height: 1.4;
         margin: 0 0 5px 0;
         font-weight: 600;
-        /* Giới hạn hiển thị đúng 2 dòng */
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
     .news-item:hover .news-name {
-        color: #ff3333; /* Hover đổi màu chữ sang đỏ */
+        color: #ff3333;
     }
 
     /* DÒNG META (Logo, Giá, Thời gian) */
@@ -134,6 +152,7 @@ if (!empty($viewed_ids) && function_exists('getProductById')) {
         font-size: 13px;
     }
 </style>
+
 <div class="character-guide-container">
 <aside>
     <div class="news-sidebar">
@@ -146,7 +165,7 @@ if (!empty($viewed_ids) && function_exists('getProductById')) {
         <?php else: ?>
             <div>
                 <?php foreach($recent_articles as $article): 
-                    $img = getFirstImage($article['content']); // Lấy ảnh từ nội dung bài
+                    $img = getFirstImage($article['content']);
                 ?>
                 <a href="<?= BASE_URL ?>/user/article_detail.php?id=<?= $article['id'] ?>" class="news-item">
                     <div class="news-img-wrapper">
@@ -175,10 +194,13 @@ if (!empty($viewed_ids) && function_exists('getProductById')) {
             </div>
         <?php else: ?>
             <div>
-                <?php foreach ($recent_products as $rp): ?>
+                <?php foreach ($recent_products as $rp): 
+                    // Gọi hàm mới để lấy ảnh sản phẩm
+                    $prod_img = getProductFirstImage($rp);
+                ?>
                     <a href="detail.php?id=<?= $rp['id'] ?>" class="news-item">
                         <div class="news-img-wrapper">
-                            <img src="<?= htmlspecialchars($rp['main_image'] ?? 'https://placehold.co/100x100/eeeeee/666666?text=UmaCT') ?>" alt="<?= htmlspecialchars($rp['name']) ?>" class="news-img">
+                            <img src="<?= htmlspecialchars($prod_img) ?>" alt="<?= htmlspecialchars($rp['name']) ?>" class="news-img">
                         </div>
                         <div class="news-content">
                             <h4 class="news-name"><?= htmlspecialchars($rp['name']) ?></h4>
