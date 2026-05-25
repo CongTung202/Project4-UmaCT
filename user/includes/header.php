@@ -119,7 +119,7 @@ $current_url = $_SERVER['REQUEST_URI'];
         
         <a href="favorite.php" class="header-icon" title="Yêu thích">
             <i class="fas fa-heart"></i>
-            <span class="badge">0</span>
+            <span hidden class="badge">0</span>
         </a>
 
         <?php $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0; ?>

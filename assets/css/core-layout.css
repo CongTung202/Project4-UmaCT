@@ -220,7 +220,7 @@ footer {
 .banner-slider {
     width: 100%;
     max-width: 1000px;
-    height: 400px; /* Cố định chiều cao 400px */
+    height: 250px; /* Cố định chiều cao 400px */
     margin: 0 auto 30px auto;
     overflow: hidden;
     border-radius: 8px;

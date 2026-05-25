@@ -36,7 +36,7 @@ $products = array_slice(array_filter(getAllProducts(), fn($p) => $p['is_active']
 
 <section class="new-arrivals">
     <div class="home-section-title">
-        <h2>🔥 Sản phẩm mới cập bến</h2>
+        <h2>Sản phẩm mới</h2>
         <a href="products.php" class="btn-view-all">Xem tất cả <i class="fas fa-chevron-right"></i></a>
     </div>
 
