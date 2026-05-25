@@ -2,8 +2,9 @@
 require_once 'includes/header.php'; 
 require_once '../models/order_model.php';
 
+// Thay vì dùng header(), ta dùng echo JS:
 if (!isset($_SESSION['user'])) {
-    header('Location: login.php');
+    echo "<script>alert('Vui lòng đăng nhập để xem lịch sử đơn hàng!'); window.location.href='login.php';</script>";
     exit;
 }
 

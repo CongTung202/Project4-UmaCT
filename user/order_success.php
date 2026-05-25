@@ -114,7 +114,7 @@ $order_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
         <div class="btn-group">
             <a href="index.php" class="btn-home"><i class="fas fa-home"></i> Về Trang Chủ</a>
-            <a href="profile.php#orders" class="btn-history"><i class="fas fa-history"></i> Lịch sử đơn hàng</a>
+            <a href="order_detail.php?id=<?= $order_id ?>" class="btn-history"><i class="fas fa-history"></i> Lịch sử đơn hàng</a>
         </div>
         
         <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; color: #aaa; font-size: 12px;">

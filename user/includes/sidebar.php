@@ -16,8 +16,8 @@ $categories = getAllCategories();
         <a href="<?= BASE_URL ?>/user/about.php" class="sidebar-item <?= (strpos($current_url, '/about.php') !== false) ? 'active' : '' ?>">
             <i class="fas fa-info-circle"></i> Về chúng tôi
         </a>
-        <a href="<?= BASE_URL ?>/user/contact.php" class="sidebar-item <?= (strpos($current_url, '/contact.php') !== false) ? 'active' : '' ?>">
-            <i class="fas fa-envelope"></i> Liên hệ
+        <a href="<?= BASE_URL ?>/user/articles.php" class="sidebar-item <?= (strpos($current_url, '/articles.php') !== false) ? 'active' : '' ?>">
+            <i class="fas fa-pencil"></i> Bài Viết
         </a>
     </div>
 
