@@ -18,6 +18,15 @@ if (!$orderData) {
 
 $order = $orderData['order_info'];
 $items = $orderData['items'];
+$payment_methods = [
+    1 => '<span style="color: #e67e22; font-weight: bold;"> Nhận hàng thanh toán (COD)</span>',
+    2 => '<span style="color: #a50064; font-weight: bold;"> Ví MoMo</span>',
+    3 => '<span style="color: #2980b9; font-weight: bold;">VietQR (PayOS)</span>',
+    4 => '<span style="color: #005a9e; font-weight: bold;"> VNPay</span>'
+];
+$pm_label = $payment_methods[$order['payment_method']] ?? '<span style="color: gray;">Chưa xác định</span>';
+$order = $orderData['order_info'];
+$items = $orderData['items'];
 
 // Xử lý khi Admin nhấn nút Cập nhật trạng thái
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['status'])) {
@@ -51,7 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['status'])) {
             <p><strong>Số điện thoại:</strong> <?= htmlspecialchars($order['phone'] ?? 'Không có') ?></p>
             <p><strong>Địa chỉ giao hàng:</strong> <?= htmlspecialchars($order['shipping_address']) ?></p>
             <p><strong>Ngày đặt:</strong> <?= date('d/m/Y H:i', strtotime($order['created_at'])) ?></p>
-            
+            <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc;">
+                <strong>Phương thức:</strong> <?= $pm_label ?>
+            </p>
             <hr>
             
             <h3>Cập nhật trạng thái</h3>

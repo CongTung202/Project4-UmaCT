@@ -9,10 +9,21 @@ import cloudinary.uploader
 from fastapi import UploadFile, File
 import json
 import unicodedata
+from payos import PayOS
+from payos.type import PaymentData
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="UmaCT API")
 
-# Cấu hình Cloudinary (Thay bằng thông tin của bạn)
+#CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # cho phép mọi nguồn 
+    allow_credentials=True,
+    allow_methods=["*"],  # Cho phép tất cả các phương thức GET, POST, PUT, DELETE...
+    allow_headers=["*"],  # Cho phép tất cả các header
+)
+# Cấu hình Cloudinary 
 cloudinary.config( 
   cloud_name = "dhefmthim", 
   api_key = "614126996368587", 
@@ -28,6 +39,12 @@ def get_db_connection():
         database='umact_db',
         cursorclass=pymysql.cursors.DictCursor # Trả về dạng Dictionary (JSON)
     )
+#payos
+payos = PayOS(
+    client_id="ef278d93-dc87-492b-80e5-50a31ca580b6", 
+    api_key="87b589f1-048a-44bc-97ec-e7b886342b34", 
+    checksum_key="ef3972c57a254e7ae93d1f245df4b4d229d8bf665a9ff778ffef515d1f154ca1"
+)
 # Cập nhật model tạo đơn hàng (Thêm voucher_id)
 class OrderCreate(BaseModel):
     user_id: int
@@ -1303,5 +1320,38 @@ def validate_voucher(data: VoucherValidate):
             return {"status": "error", "message": "Bác đã sử dụng mã này cho một đơn hàng trước đó rồi!"}
 
         return {"status": "success", "data": {"voucher_id": voucher['id'], "discount_amount": float(voucher['discount_amount'])}}
+    finally:
+        conn.close()
+# API 62: Tạo link thanh toán PayOS
+@app.post("/api/payments/payos/create-link/{order_id}")
+def create_payos_link(order_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # 1. Lấy thông tin đơn hàng
+        cursor.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+        order = cursor.fetchone()
+        if not order:
+            raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+
+        # 2. Tạo dữ liệu gửi sang PayOS
+        # Mã đơn hàng (orderCode) của PayOS yêu cầu là số nguyên độc nhất (Dưới 53 bit)
+        payment_data = PaymentData(
+            orderCode=order['id'],
+            amount=int(order['total_price']),
+            description=f"Thanh toan UmaCT DH{order['id']}",
+            # Link trả về khi khách hủy thanh toán
+            cancelUrl=f"http://localhost/project4/user/order_success.php?id={order['id']}&status=cancel",
+            # Link trả về khi khách thanh toán thành công
+            returnUrl=f"http://localhost/project4/user/order_success.php?id={order['id']}&status=success" 
+        )
+
+        # 3. Gọi PayOS tạo link
+        payos_checkout = payos.createPaymentLink(payment_data)
+        
+        # Trả về đường link để Frontend (PHP) chuyển hướng khách hàng
+        return {"status": "success", "checkoutUrl": payos_checkout.checkoutUrl}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()

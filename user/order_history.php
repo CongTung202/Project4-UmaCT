@@ -21,6 +21,16 @@ function getStatusLabel($status) {
     ];
     return $labels[$status] ?? ['text' => $status, 'color' => '#95a5a6'];
 }
+// Hàm dịch phương thức thanh toán cho User
+function getPaymentMethodLabel($method_id) {
+    $methods = [
+        1 => '<i  style="color: #e67e22;"></i> COD',
+        2 => '<i  style="color: #a50064;"></i> MoMo',
+        3 => '<i style="color: #2980b9;"></i> PayOS',
+        4 => '<i  style="color: #005a9e;"></i> VNPay'
+    ];
+    return $methods[$method_id] ?? 'Khác';
+}
 ?>
 
 <div style="width: 100%;">
@@ -39,6 +49,7 @@ function getStatusLabel($status) {
                         <th style="padding: 15px;">Mã đơn hàng</th>
                         <th style="padding: 15px;">Ngày đặt</th>
                         <th style="padding: 15px;">Tổng tiền</th>
+                        <th style="padding: 15px;">Phương thức</th>
                         <th style="padding: 15px;">Trạng thái</th>
                         <th style="padding: 15px; text-align: center;">Thao tác</th>
                     </tr>
@@ -50,6 +61,9 @@ function getStatusLabel($status) {
                             <td style="padding: 15px; font-weight: bold;">#ORD-<?= $o['id'] ?></td>
                             <td style="padding: 15px; color: #666;"><?= date('d/m/Y H:i', strtotime($o['created_at'])) ?></td>
                             <td style="padding: 15px; font-weight: bold; color: #ff3333;"><?= number_format($o['total_price'], 0, ',', '.') ?>đ</td>
+                            <td style="padding: 15px; font-weight: 600; font-size: 13px;">
+                                <?= getPaymentMethodLabel($o['payment_method']) ?>
+                            </td>
                             <td style="padding: 15px;">
                                 <span style="background: <?= $st['color'] ?>; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">
                                     <?= $st['text'] ?>

@@ -72,6 +72,10 @@ foreach ($selected_ids as $id) {
                             <input type="radio" name="payment" value="1" checked>
                             <span>Thanh toán khi nhận hàng (COD)</span>
                         </label>
+                        <label style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+    <input type="radio" name="payment" value="3">
+    <span>Chuyển khoản VietQR (PayOS) <img src="https://payos.vn/wp-content/uploads/sites/13/2023/07/payos-logo.svg" style="height: 15px; margin-left: 5px;"></span>
+</label>
                     </div>
                 </form>
             </div>
@@ -204,8 +208,31 @@ if (btnPlaceOrder) {
         .then(res => res.json())
         .then(res => {
             if(res.status === 'success') {
-                showToast('Đặt hàng thành công!', 'success');
-                setTimeout(() => { window.location.href = 'order_success.php?id=' + res.order_id; }, 1500);
+            const orderId = res.order_id;
+            
+            // NẾU LÀ COD (payment_method = 1) -> Chuyển sang trang thành công luôn
+            if (data.payment_method == 1) {
+                showToast('Đặt hàng thành công! Đang chuyển hướng...', 'success');
+                setTimeout(() => { window.location.href = 'order_success.php?id=' + orderId; }, 1500);
+            } 
+            // NẾU LÀ PAYOS (payment_method = 3) -> Gọi Python lấy link quét QR
+            else if (data.payment_method == 3) {
+                showToast('Đang tạo mã QR thanh toán...', 'success');
+                fetch(`http://127.0.0.1:8000/api/payments/payos/create-link/${orderId}`, {
+                    method: 'POST'
+                })
+                .then(payosRes => payosRes.json())
+                .then(payosData => {
+                    if(payosData.status === 'success') {
+                        // Chuyển hướng khách hàng sang cổng thanh toán của PayOS
+                        window.location.href = payosData.checkoutUrl;
+                    } else {
+                        showToast('Lỗi tạo link thanh toán!', 'error');
+                        btnPlaceOrder.disabled = false;
+                        btnPlaceOrder.innerHTML = 'ĐẶT HÀNG NGAY';
+                    }
+                });
+            }
             } else {
                 showToast(res.message, 'error');
                 // Sửa lỗi "Cannot set properties of null" ở đây
