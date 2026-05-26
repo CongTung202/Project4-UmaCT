@@ -69,6 +69,10 @@ class ReviewCreate(BaseModel):
     comment: str
 class ReviewReply(BaseModel):
     staff_reply: str
+# Model mô tả dữ liệu đầu vào khi đổi mật khẩu
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
 # 1. API: Lấy danh sách danh mục (Read)
 @app.get("/api/categories")
 def get_categories():
@@ -1353,5 +1357,57 @@ def create_payos_link(order_id: int):
         return {"status": "success", "checkoutUrl": payos_checkout.checkoutUrl}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+# API 63: Đồng bộ trạng thái từ PayOS
+@app.get("/api/payments/payos/sync/{order_id}")
+def sync_payos_order(order_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # 1. Kiểm tra đơn hàng trong DB
+        cursor.execute("SELECT payment_method, status FROM orders WHERE id = %s", (order_id,))
+        order = cursor.fetchone()
+        
+        # 2. Chỉ đồng bộ nếu là đơn PayOS và đang ở trạng thái PENDING (Chờ xử lý)
+        if order and order['payment_method'] == 3 and order['status'] == 'PENDING':
+            try:
+                # Chủ động gọi sang máy chủ PayOS để tra cứu trạng thái giao dịch
+                payment_info = payos.getPaymentLinkInformation(order_id)
+                
+                # Cập nhật Database theo câu trả lời của PayOS
+                if payment_info.status == "PAID":
+                    cursor.execute("UPDATE orders SET status = 'PAID' WHERE id = %s", (order_id,))
+                    conn.commit()
+                elif payment_info.status == "CANCELLED":
+                    cursor.execute("UPDATE orders SET status = 'CANCELLED' WHERE id = %s", (order_id,))
+                    conn.commit()
+            except Exception as e:
+                pass # Bỏ qua nếu không tìm thấy link trên hệ thống PayOS
+                
+        return {"status": "success", "message": "Đã đồng bộ trạng thái."}
+    finally:
+        conn.close()
+# 64. API: Đổi mật khẩu người dùng
+@app.put("/api/users/{user_id}/password")
+def change_user_password(user_id: int, pw_data: PasswordUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # 1. Tra cứu mật khẩu cũ xem có khớp không
+        cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+        if not user or user['password'] != pw_data.current_password:
+            return {"status": "error", "message": "Mật khẩu hiện tại không chính xác!"}
+            
+        # 2. Cập nhật mật khẩu mới
+        cursor.execute("UPDATE users SET password = %s WHERE id = %s", (pw_data.new_password, user_id))
+        conn.commit()
+        
+        return {"status": "success", "message": "Đổi mật khẩu thành công!"}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
     finally:
         conn.close()

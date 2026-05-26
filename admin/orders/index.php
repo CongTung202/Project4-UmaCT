@@ -96,6 +96,17 @@ $orders = array_slice($filtered_orders, $offset, $limit);
     <?php if ($error): ?>
         <div style="color: #721c24; background-color: #f8d7da; padding: 10px; margin-bottom: 15px; border-radius: 4px; border-left: 4px solid #dc3545;"><?= $error ?></div>
     <?php endif; ?>
+    <?php if (isset($_GET['success'])): ?>
+    <div style="color: #155724; background-color: #d4edda; padding: 12px; margin-bottom: 20px; border-radius: 6px; font-weight: bold;">
+        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($_GET['success']) ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['error'])): ?>
+        <div style="color: #721c24; background-color: #f8d7da; padding: 12px; margin-bottom: 20px; border-radius: 6px; font-weight: bold;">
+            <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($_GET['error']) ?>
+        </div>
+    <?php endif; ?>
 
     <div class="filter-bar">
         <form method="GET" class="filter-form">
@@ -155,7 +166,12 @@ $orders = array_slice($filtered_orders, $offset, $limit);
                     
                     <td>
                         <a href="detail.php?id=<?= $o['id'] ?>" class="btn btn-edit" style="background-color: #17a2b8;" title="Xem chi tiết"><i class="fas fa-eye"></i> Chi tiết</a>
-                        <button class="btn btn-delete" onclick="openDeleteModal(<?= $o['id'] ?>)" style="cursor: pointer; border: none;" title="Xóa"><i class="fas fa-trash-alt"></i></button>
+                        <a href="delete.php?id=<?= $o['id'] ?>" 
+                            class="btn btn-delete" 
+                            style="background-color: #dc3545; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                            onclick="return confirm('CẢNH BÁO: Bác có chắc chắn muốn xóa vĩnh viễn đơn hàng #<?= $o['id'] ?> không?\n\nHành động này KHÔNG THỂ khôi phục!');">
+                            <i class="fas fa-trash"></i> Xóa đơn
+                        </a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

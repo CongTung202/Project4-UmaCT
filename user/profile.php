@@ -143,6 +143,24 @@ $user = $_SESSION['user'];
 
                 <button type="submit" class="btn-save" id="btnSaveProfile">Lưu Thay Đổi</button>
             </form>
+            <hr style="margin: 40px 0; border: 0; border-top: 1px dashed #ccc;">
+            <h3 style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 10px;"><i class="fas fa-lock"></i> Đổi mật khẩu</h3>
+        
+        <form id="passwordForm">
+            <div class="form-group">
+                <label>Mật khẩu hiện tại <span style="color: red;">*</span></label>
+                <input type="password" id="current_password" class="form-control" placeholder="Nhập mật khẩu hiện tại...">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu mới <span style="color: red;">*</span></label>
+                <input type="password" id="new_password" class="form-control" placeholder="Nhập mật khẩu mới (Ít nhất 6 ký tự)...">
+            </div>
+            <div class="form-group">
+                <label>Xác nhận mật khẩu mới <span style="color: red;">*</span></label>
+                <input type="password" id="confirm_password" class="form-control" placeholder="Nhập lại mật khẩu mới...">
+            </div>
+            <button type="submit" class="btn-save" id="btnChangePassword" style="background: #333; color: white;">Cập Nhật Mật Khẩu</button>
+        </form>
         </div>
     </div>
 </div>
@@ -191,6 +209,57 @@ document.getElementById('profileForm').addEventListener('submit', function(e) {
     })
     .catch(err => {
         console.error(err);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showToast('Lỗi kết nối, vui lòng thử lại!', 'error');
+    });
+});
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const currentPw = document.getElementById('current_password').value.trim();
+    const newPw = document.getElementById('new_password').value.trim();
+    const confirmPw = document.getElementById('confirm_password').value.trim();
+
+    if (!currentPw || !newPw || !confirmPw) {
+        showToast('Vui lòng điền đầy đủ 3 ô mật khẩu!', 'error');
+        return;
+    }
+    if (newPw.length < 6) {
+        showToast('Mật khẩu mới phải có ít nhất 6 ký tự!', 'error');
+        return;
+    }
+    if (newPw !== confirmPw) {
+        showToast('Xác nhận mật khẩu mới không khớp!', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btnChangePassword');
+    const originalText = btn.innerText;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    btn.disabled = true;
+
+    fetch('ajax_change_password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            current_password: currentPw,
+            new_password: newPw
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            document.getElementById('passwordForm').reset(); // Xóa trắng 3 ô sau khi đổi thành công
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(err => {
         btn.innerHTML = originalText;
         btn.disabled = false;
         showToast('Lỗi kết nối, vui lòng thử lại!', 'error');
