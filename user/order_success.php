@@ -3,6 +3,14 @@ require_once 'includes/header.php';
 
 // Lấy mã đơn hàng từ URL để hiển thị cho khách
 $order_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($order_id > 0) {
+    $ch_sync = curl_init(API_URL . '/payments/payos/sync/' . $order_id);
+    curl_setopt($ch_sync, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch_sync, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch_sync, CURLOPT_TIMEOUT, 5); // Đợi tối đa 5 giây
+    curl_exec($ch_sync);
+    curl_close($ch_sync);
+}
 ?>
 
 <style>

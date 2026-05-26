@@ -12,28 +12,53 @@ if (!isset($_SESSION['user'])) {
 // Lấy thông tin user hiện tại từ Database để pre-fill (điền sẵn)
 $user = $_SESSION['user']; 
 
-// Nhận danh sách ID sản phẩm được chọn từ giỏ hàng (Gửi qua POST hoặc lấy từ Session đã lọc)
-$selected_ids = $_POST['selected_items'] ?? []; 
-if (empty($selected_ids)) {
-    echo "<script>alert('Vui lòng chọn sản phẩm trong giỏ hàng trước!'); window.location.href='cart.php';</script>";
-    exit;
-}
 
 $checkout_items = [];
 $total_bill = 0;
 
-foreach ($selected_ids as $id) {
+// KIỂM TRA: NẾU LÀ "MUA NGAY" TỪ TRANG CHI TIẾT
+if (isset($_POST['is_direct_buy']) && $_POST['is_direct_buy'] == '1') {
+    $id = (int)$_POST['product_id'];
+    $qty = (int)$_POST['quantity'];
+    
     $p = getProductById($id);
-    // Ở đây bác cần lấy thêm số lượng từ Cart của User này
-    $cart_data = getCartFromDB($user['id']);
-    foreach($cart_data as $c) {
-        if($c['id'] == $id) {
-            $p['quantity'] = $c['quantity'];
-            $p['main_image'] = $c['main_image'];
-            $checkout_items[] = $p;
-            $total_bill += ($p['price'] * $p['quantity']);
+    if ($p) {
+        $p['quantity'] = $qty;
+        
+        // Lấy ảnh đại diện từ chuỗi JSON của API Python
+        $images = !empty($p['images']) ? json_decode($p['images'], true) : [];
+        $p['main_image'] = !empty($images) ? $images[0] : 'https://placehold.co/100x100?text=No+Image';
+        
+        $checkout_items[] = $p;
+        $total_bill += ($p['price'] * $qty);
+    }
+} 
+// KIỂM TRA: NẾU ĐI TỪ GIỎ HÀNG SANG (Như cũ)
+else {
+    $selected_ids = $_POST['selected_items'] ?? []; 
+    if (empty($selected_ids)) {
+        echo "<script>alert('Vui lòng chọn sản phẩm trong giỏ hàng trước!'); window.location.href='cart.php';</script>";
+        exit;
+    }
+
+    foreach ($selected_ids as $id) {
+        $p = getProductById($id);
+        $cart_data = getCartFromDB($user['id']);
+        foreach($cart_data as $c) {
+            if($c['id'] == $id) {
+                $p['quantity'] = $c['quantity'];
+                $p['main_image'] = $c['main_image'];
+                $checkout_items[] = $p;
+                $total_bill += ($p['price'] * $p['quantity']);
+            }
         }
     }
+}
+
+// Chốt chặn an toàn: Tránh trường hợp mảng rỗng
+if (empty($checkout_items)) {
+    echo "<script>alert('Sản phẩm không hợp lệ!'); window.location.href='index.php';</script>";
+    exit;
 }
 ?>
 
@@ -74,7 +99,7 @@ foreach ($selected_ids as $id) {
                         </label>
                         <label style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
     <input type="radio" name="payment" value="3">
-    <span>Chuyển khoản VietQR (PayOS) <img src="https://payos.vn/wp-content/uploads/sites/13/2023/07/payos-logo.svg" style="height: 15px; margin-left: 5px;"></span>
+    <span>VietQR (PayOS)</span>
 </label>
                     </div>
                 </form>

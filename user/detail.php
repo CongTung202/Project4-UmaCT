@@ -134,7 +134,7 @@ $reviews = json_decode($res_reviews, true)['data'] ?? [];
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </button>
                         
-                        <button type="button" class="btn-buy-now" onclick="addToCart('buy_now')">
+                        <button type="button" class="btn-buy-now" onclick="buyNowDirectly()">
                             <i class="fas fa-bolt"></i> Mua ngay
                         </button>
 
@@ -349,6 +349,25 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 });
+function buyNowDirectly() {
+    // Tìm cái form bọc quanh ô số lượng (đang trỏ về cart.php)
+    const form = document.querySelector('form[action="cart.php"]');
+    
+    if (form) {
+        // 1. Bẻ lái đích đến sang trang Thanh toán
+        form.action = 'checkout.php';
+        
+        // 2. Nhét thêm 1 cái thẻ ẩn để báo hiệu cho checkout.php biết đây là "Mua trực tiếp"
+        const directInput = document.createElement('input');
+        directInput.type = 'hidden';
+        directInput.name = 'is_direct_buy';
+        directInput.value = '1';
+        form.appendChild(directInput);
+        
+        // 3. Phóng thẳng sang trang Checkout
+        form.submit();
+    }
+}
 </script>
 
 <style>
