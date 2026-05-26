@@ -19,7 +19,7 @@ if (!$article) {
         </a>
 
         <!-- Tiêu đề & Thông tin tác giả -->
-        <h1 style="color: #333; margin-bottom: 15px; font-size: 26px; line-height: 1.4;">
+        <h1 style="color: #333; margin-bottom: 15px; font-size: 26px; line-height: 1.4; border-bottom: 2px solid #ff3333; padding-bottom: 12px;">
             <?= htmlspecialchars($article['title']) ?>
         </h1>
 
