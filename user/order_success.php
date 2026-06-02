@@ -1,15 +1,36 @@
 <?php 
 require_once 'includes/header.php'; 
 
-// Lấy mã đơn hàng từ URL để hiển thị cho khách
-$order_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+// 1. SỬA LỖI LẤY ID: Ưu tiên lấy 'orderCode' của PayOS trả về, nếu không có mới lấy 'id' (đơn COD)
+$order_id = 0;
+if (isset($_GET['orderCode'])) {
+    $order_id = (int)$_GET['orderCode'];
+} elseif (isset($_GET['id'])) {
+    $order_id = (int)$_GET['id'];
+}
+
+// 2. ÉP CẬP NHẬT TRẠNG THÁI NGAY LẬP TỨC DỰA VÀO URL CỦA PAYOS
 if ($order_id > 0) {
-    $ch_sync = curl_init(API_URL . '/payments/payos/sync/' . $order_id);
-    curl_setopt($ch_sync, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch_sync, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch_sync, CURLOPT_TIMEOUT, 5); // Đợi tối đa 5 giây
-    curl_exec($ch_sync);
-    curl_close($ch_sync);
+    // TRƯỜNG HỢP 1: KHÁCH BẤM HỦY TRÊN PAYOS (URL có cancel=true)
+    if (isset($_GET['cancel']) && $_GET['cancel'] == 'true') {
+        $ch_cancel = curl_init(API_URL . '/orders/' . $order_id . '/status');
+        curl_setopt($ch_cancel, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($ch_cancel, CURLOPT_POSTFIELDS, json_encode(['status' => 'CANCELLED']));
+        curl_setopt($ch_cancel, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch_cancel, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_exec($ch_cancel);
+        curl_close($ch_cancel);
+    }
+    // TRƯỜNG HỢP 2: KHÁCH ĐÃ QUÉT MÃ VÀ CHUYỂN KHOẢN XONG (URL có status=PAID)
+    elseif (isset($_GET['status']) && $_GET['status'] == 'PAID') {
+        $ch_paid = curl_init(API_URL . '/orders/' . $order_id . '/status');
+        curl_setopt($ch_paid, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($ch_paid, CURLOPT_POSTFIELDS, json_encode(['status' => 'PAID']));
+        curl_setopt($ch_paid, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch_paid, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_exec($ch_paid);
+        curl_close($ch_paid);
+    }
 }
 ?>
 

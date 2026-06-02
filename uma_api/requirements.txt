@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pymysql
+pydantic
+cloudinary
+python-multipart
+payos
